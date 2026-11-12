@@ -164,7 +164,7 @@ gitGraph
 | Integrante | GitHub | Rama | Apps a cargo |
 |---|---|---|---|
 | **Angel Astorga** | [@Angel-Asto](https://github.com/Angel-Asto) | `feature/aastorga` | `usuarios`, `inventario`, `compras`, `reportes` |
-| **Kinerett Castillo** | [@ukinekay](https://github.com//kinekay) | `feature/kcastillo` | `productos`, `ventas` |
+| **Kinerett Castillo** | [@kinekay](https://github.com//kinekay) | `feature/kcastillo` | `productos`, `ventas` |
 
 <p align="center">
   <sub>Proyecto Integrado – TIHI43 · INACAP Sede Arica · Docente: Valery Rodríguez</sub>
