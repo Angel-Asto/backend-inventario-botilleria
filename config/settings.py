@@ -37,6 +37,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'usuarios',
+    'productos',
+    'inventario',
+    'compras',
+    'ventas',
+    'reportes',
 ]
 
 MIDDLEWARE = [
@@ -54,10 +60,11 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -125,3 +132,14 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+AUTH_USER_MODEL = 'usuarios.Usuario'      # antes de la primera migración
+
+LANGUAGE_CODE = 'es-cl'
+TIME_ZONE = 'America/Santiago'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+LOGIN_URL = 'usuarios:iniciar_sesion'
+LOGIN_REDIRECT_URL = 'usuarios:inicio'
+LOGOUT_REDIRECT_URL = 'usuarios:iniciar_sesion'

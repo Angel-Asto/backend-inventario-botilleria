@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block titulo %}Iniciar sesión | Botillería{% endblock %}
+{% block clase_body %}acceso-body{% endblock %}
+{% block menu %}{% endblock %}
+{% block contenido %}
+<div class="row justify-content-center pt-5">
+  <div class="col-11 col-sm-8 col-md-5 col-lg-4">
+    <div class="card acceso-card"><div class="card-body p-4 text-start">
+      <div class="logo"><i class="bi bi-shop"></i></div>
+      <h1 class="h4 text-center mb-1">Iniciar sesión</h1>
+      <p class="text-center text-muted">Sistema de Inventario y Ventas</p>
+      {% if form.non_field_errors %}<div class="alert alert-warning">Usuario o contraseña incorrectos.</div>{% endif %}
+      <form method="post">{% csrf_token %}
+        {% include 'includes/campos.html' %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn btn-acc w-100" type="submit">Ingresar</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
