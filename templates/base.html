@@ -15,12 +15,18 @@
   {% if user.is_authenticated %}
   <nav class="bnav">
     <div class="brand"><i class="bi bi-shop"></i>Botillería<small>{{ user.get_rol_display }}</small></div>
+
     <div class="grp">Operación</div>
     <a class="m" href="{% url 'usuarios:inicio' %}"><i class="bi bi-speedometer2"></i><span>Panel</span></a>
+
+    <div class="grp">Inventario</div>
+    <a class="m" href="{% url 'productos:lista' %}"><i class="bi bi-box-seam"></i><span>Productos</span></a>
+
     {% if user.es_admin %}
     <div class="grp">Administración</div>
     <a class="m" href="{% url 'usuarios:lista' %}"><i class="bi bi-people"></i><span>Usuarios</span></a>
     {% endif %}
+
     <div class="grp">Cuenta</div>
     <a class="m" href="{% url 'usuarios:cambiar_contrasena' %}"><i class="bi bi-key"></i><span>Clave</span></a>
     <a class="m" href="#" onclick="document.getElementById('salir').submit();return false;"><i class="bi bi-box-arrow-right"></i><span>Salir</span></a>
@@ -36,7 +42,7 @@
       <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
     </div>
     {% endif %}
-    {% for m in messages %}<div class="alert alert-success">{{ m }}</div>{% endfor %}
+    {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% else %}success{% endif %}">{{ m }}</div>{% endfor %}
     {% block contenido %}{% endblock %}
   </main>
 </body>
