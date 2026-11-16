@@ -1,3 +1,71 @@
 from django.test import TestCase
+from django.urls import reverse
 
-# Create your tests here.
+from usuarios.models import Usuario
+
+from .models import Categoria, Producto
+
+CLAVE = 'Clave-segura-123'
+
+
+class ProductoTests(TestCase):
+    def setUp(self):
+        self.admin = Usuario.objects.create_user('admin1', password=CLAVE, rol='admin')
+        self.trab = Usuario.objects.create_user('trab1', password=CLAVE, rol='trabajador')
+        self.cat = Categoria.objects.create(nombre='Cervezas')
+        self.prod = Producto.objects.create(
+            categoria=self.cat, codigo_barras='7802', nombre='Cerveza Cristal 470cc',
+            precio=1490, stock=48, stock_minimo=12,
+        )
+
+    def datos(self, **extra):
+        d = {'categoria': self.cat.pk, 'codigo_barras': '9999', 'nombre': 'Cerveza Escudo',
+                'precio': 1590, 'stock': 10, 'stock_minimo': 5}
+        d.update(extra)
+        return d
+
+    def test_trabajador_puede_ver_pero_no_crear(self):
+        self.client.login(username='trab1', password=CLAVE)
+        self.assertEqual(self.client.get(reverse('productos:lista')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('productos:crear')).status_code, 403)
+
+    def test_admin_crea_producto(self):
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:crear'), self.datos())
+        self.assertTrue(Producto.objects.filter(codigo_barras='9999').exists())
+
+    def test_codigo_de_barras_no_se_repite(self):
+        self.client.login(username='admin1', password=CLAVE)
+        r = self.client.post(reverse('productos:crear'), self.datos(codigo_barras='7802'))
+        self.assertContains(r, 'Ya existe un producto con ese código')
+        self.assertEqual(Producto.objects.count(), 1)
+
+    def test_precio_debe_ser_mayor_a_cero(self):
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:crear'), self.datos(precio=0))
+        self.assertEqual(Producto.objects.count(), 1)
+
+    def test_busqueda_por_codigo_y_por_nombre(self):
+        self.client.login(username='admin1', password=CLAVE)
+        r = self.client.get(reverse('productos:lista'), {'q': '7802'})
+        self.assertContains(r, 'Cerveza Cristal')
+        r = self.client.get(reverse('productos:lista'), {'q': 'inexistente'})
+        self.assertNotContains(r, 'Cerveza Cristal')
+
+    def test_baja_no_borra_el_producto(self):
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:baja', args=[self.prod.pk]))
+        self.prod.refresh_from_db()
+        self.assertFalse(self.prod.activo)
+
+    def test_editar_no_cambia_el_stock(self):
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:editar', args=[self.prod.pk]),
+        self.datos(codigo_barras='7802', nombre='Cristal 470', stock=1))
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, 48)
+
+    def test_no_se_elimina_categoria_con_productos(self):
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:categoria_eliminar', args=[self.cat.pk]))
+        self.assertTrue(Categoria.objects.filter(pk=self.cat.pk).exists())
