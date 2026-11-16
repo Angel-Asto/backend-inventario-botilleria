@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block titulo %}Panel | Botillería{% endblock %}
+{% block contenido %}
+<div class="hello"><h1>Resumen del día</h1><p>Bienvenido, {{ user.get_full_name|default:user.username }}.</p></div>
+{% endblock %}
