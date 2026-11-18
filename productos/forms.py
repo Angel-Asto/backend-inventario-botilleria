@@ -8,7 +8,7 @@ from .models import Categoria, Producto
 class CategoriaForm(EstiloBootstrapMixin, forms.ModelForm):
     class Meta:
         model = Categoria
-        fields = ('nombre',)
+        fields = ('nombre', 'es_alcoholica')
 
     def clean_nombre(self):
         return self.cleaned_data['nombre'].strip()

@@ -8,5 +8,40 @@
     <button class="btn btn-acc" type="submit">Guardar</button>
     <a class="btn btn-outline-secondary" href="{{ volver }}">Cancelar</a>
   </form>
+  {% if form.codigo_barras %}
+  <div id="aviso" class="text-danger small mt-2"></div>
+  {% include 'includes/escaner_camara.html' %}
+  {% endif %}
 </div></div></div>
+
+{% if form.codigo_barras %}
+<script>
+(function () {
+  // Agrega un botón "Cámara" junto al código de barras para escanearlo en vez de escribirlo.
+  var campo = document.getElementById('{{ form.codigo_barras.id_for_label }}');
+  var grupo = document.createElement('div'); grupo.className = 'input-group';
+  campo.parentNode.insertBefore(grupo, campo); grupo.appendChild(campo);
+  var boton = document.createElement('button');
+  boton.type = 'button'; boton.id = 'btn-camara'; boton.className = 'btn btn-outline-dark';
+  boton.title = 'Escanear con la cámara';
+  boton.innerHTML = '<i class="bi bi-camera"></i> <span class="d-none d-sm-inline">Cámara</span>';
+  grupo.appendChild(boton);
+
+  // Evita que un lector externo (USB/Bluetooth) envíe el formulario con su Enter final.
+  campo.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+
+  EscanerCamara.conectar({
+    boton: boton,
+    panel: document.getElementById('panel-camara'),
+    aviso: document.getElementById('aviso'),
+    continuo: false,
+    alLeer: function (codigo) {
+      campo.value = codigo;
+      var siguiente = document.getElementById('{{ form.nombre.id_for_label }}');
+      if (siguiente) siguiente.focus();
+    },
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

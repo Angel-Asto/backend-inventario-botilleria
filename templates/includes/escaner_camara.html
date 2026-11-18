@@ -1,0 +1,11 @@
+{% load static %}
+{# Panel de la cámara para escanear códigos. Se conecta con EscanerCamara.conectar() desde la página. #}
+<div id="panel-camara" class="mt-3 d-none">
+  <div id="lector" data-lector class="border rounded overflow-hidden mx-auto" style="max-width:420px"></div>
+  <div class="d-flex justify-content-between align-items-center mt-2 mx-auto" style="max-width:420px">
+    <small class="text-muted" data-estado>Apunta al código de barras o QR.</small>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-cerrar>Cerrar cámara</button>
+  </div>
+</div>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="{% static 'js/escaner_camara.js' %}"></script>

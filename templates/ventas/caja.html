@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block titulo %}Nueva venta | Botillería{% endblock %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 m-0">Nueva venta</h1>
+  <span class="badge bg-secondary">HU-13 · HU-14 · HU-15 · HU-17</span>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card card-body">
+      <label class="form-label" for="escaner">Código de barras (escanea o escribe y presiona Enter)</label>
+      <div class="input-group input-group-lg">
+        <input id="escaner" class="form-control" autocomplete="off" autofocus inputmode="numeric">
+        <button type="button" class="btn btn-outline-dark" id="btn-camara" title="Escanear con la cámara">
+          <i class="bi bi-camera"></i> <span class="d-none d-sm-inline">Cámara</span>
+        </button>
+      </div>
+      <div id="aviso" class="text-danger small mt-2"></div>
+      {% include 'includes/escaner_camara.html' %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <form method="post" id="form-venta" class="card card-body">
+      {% csrf_token %}
+      <h2 class="h5">Carrito</h2>
+      <table class="table align-middle" id="tabla">
+        <thead><tr><th>Producto</th><th style="width:90px">Cant.</th><th class="text-end">Subtotal</th><th></th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><th colspan="2">Total</th><th class="text-end" id="total">$0</th><th></th></tr></tfoot>
+      </table>
+
+      <div class="mb-3">
+        <label class="form-label" for="medio_pago">Medio de pago</label>
+        <select class="form-select" name="medio_pago" id="medio_pago" required>
+          <option value="">Elige…</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+        </select>
+      </div>
+
+      <div class="form-check mb-3 d-none" id="bloque-edad">
+        <input class="form-check-input" type="checkbox" name="mayor_edad" id="mayor_edad">
+        <label class="form-check-label" for="mayor_edad">Confirmo que el cliente es mayor de 18 años (venta de alcohol).</label>
+      </div>
+
+      <button class="btn btn-acc btn-lg" id="pagar" disabled>Pagar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  var carrito = {};
+  var URL_BUSCAR = "{% url 'ventas:buscar' %}";
+  var tbody = document.querySelector('#tabla tbody');
+  var escaner = document.getElementById('escaner');
+  var aviso = document.getElementById('aviso');
+  var pesos = function (n) { return '$' + n.toLocaleString('es-CL'); };
+
+  function pintar() {
+    tbody.innerHTML = '';
+    var total = 0, alcohol = false, hay = false;
+    Object.keys(carrito).forEach(function (cod) {
+      var it = carrito[cod]; hay = true;
+      total += it.precio * it.cantidad; alcohol = alcohol || it.alcohol;
+      var tr = document.createElement('tr');
+      var td1 = document.createElement('td'); td1.textContent = it.nombre;
+      var h = document.createElement('input'); h.type = 'hidden'; h.name = 'codigo'; h.value = cod; td1.appendChild(h);
+      var td2 = document.createElement('td');
+      var n = document.createElement('input'); n.type = 'number'; n.min = 1; n.max = it.stock; n.name = 'cantidad';
+      n.value = it.cantidad; n.className = 'form-control form-control-sm';
+      n.addEventListener('change', function () {
+        var v = parseInt(n.value, 10) || 1; it.cantidad = Math.max(1, Math.min(v, it.stock)); pintar();
+      });
+      td2.appendChild(n);
+      var td3 = document.createElement('td'); td3.className = 'text-end'; td3.textContent = pesos(it.precio * it.cantidad);
+      var td4 = document.createElement('td');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-sm btn-outline-danger'; b.textContent = '×';
+      b.addEventListener('click', function () { delete carrito[cod]; pintar(); });
+      td4.appendChild(b);
+      [td1, td2, td3, td4].forEach(function (td) { tr.appendChild(td); });
+      tbody.appendChild(tr);
+    });
+    document.getElementById('total').textContent = pesos(total);
+    document.getElementById('bloque-edad').classList.toggle('d-none', !alcohol);
+    document.getElementById('pagar').disabled = !hay;
+  }
+
+  // Lector externo (USB/Bluetooth) o teclado: escribe el código y envía Enter.
+  escaner.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var codigo = escaner.value.trim(); escaner.value = '';
+    agregar(codigo);
+  });
+
+  function agregar(codigo) {
+    aviso.textContent = '';
+    if (!codigo) return;
+    fetch(URL_BUSCAR + '?codigo=' + encodeURIComponent(codigo)).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+    }).then(function (res) {
+      if (!res.ok) { aviso.textContent = res.d.error; return; }
+      var p = res.d, it = carrito[codigo];
+      if (it) {
+        if (it.cantidad >= p.stock) { aviso.textContent = 'No hay más stock de ' + p.nombre + '.'; return; }
+        it.cantidad += 1;
+      } else {
+        if (p.stock < 1) { aviso.textContent = p.nombre + ' no tiene stock.'; return; }
+        carrito[codigo] = { nombre: p.nombre, precio: p.precio, stock: p.stock, alcohol: p.alcohol, cantidad: 1 };
+      }
+      pintar();
+    }).catch(function () { aviso.textContent = 'Error de conexión.'; });
+  }
+
+  // Cámara: queda abierta para escanear varios productos seguidos.
+  EscanerCamara.conectar({
+    boton: document.getElementById('btn-camara'),
+    panel: document.getElementById('panel-camara'),
+    aviso: aviso,
+    continuo: true,
+    alLeer: agregar,
+  });
+})();
+</script>
+{% endblock %}

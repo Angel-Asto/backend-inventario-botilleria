@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block titulo %}Stock actual | Botillería{% endblock %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 m-0">Stock actual</h1>
+  <span class="badge bg-secondary">HU-10 · HU-11</span>
+</div>
+
+{% if cantidad_bajo %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center">
+  <span><strong>Alerta de stock bajo:</strong> {{ cantidad_bajo }} producto{{ cantidad_bajo|pluralize }} bajo el mínimo.</span>
+  {% if solo_bajo %}<a class="btn btn-sm btn-outline-dark" href="{% url 'inventario:stock' %}">Ver todos</a>
+  {% else %}<a class="btn btn-sm btn-outline-dark" href="?solo_bajo=1">Ver solo estos</a>{% endif %}
+</div>
+{% endif %}
+
+<div class="table-responsive">
+<table class="table table-striped align-middle">
+  <thead><tr><th>Producto</th><th>Categoría</th><th>Código</th><th>Stock</th><th>Mínimo</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for p in object_list %}
+    <tr>
+      <td>{{ p.nombre }}</td><td>{{ p.categoria }}</td><td>{{ p.codigo_barras }}</td>
+      <td>{{ p.stock }}</td><td>{{ p.stock_minimo }}</td>
+      <td>{% if p.stock < p.stock_minimo %}<span class="badge bg-danger">Stock bajo</span>{% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="text-center text-muted">No hay productos.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if is_paginated %}
+<nav><ul class="pagination">
+  {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if solo_bajo %}&solo_bajo=1{% endif %}">Anterior</a></li>{% endif %}
+  <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages }}</span></li>
+  {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if solo_bajo %}&solo_bajo=1{% endif %}">Siguiente</a></li>{% endif %}
+</ul></nav>
+{% endif %}
+{% endblock %}
