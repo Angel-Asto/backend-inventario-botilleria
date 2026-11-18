@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block titulo %}Registrar compra | Botillería{% endblock %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 m-0">Registrar compra</h1>
+  <span class="badge bg-secondary">HU-20 · HU-21</span>
+</div>
+<form method="post" class="card card-body">
+  {% csrf_token %}
+  {% include 'includes/campos.html' %}
+
+  <h2 class="h5 mt-2">Productos comprados</h2>
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<div class="text-danger small mb-2">{{ formset.non_form_errors }}</div>{% endif %}
+  <div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Producto</th><th style="width:140px">Cantidad</th></tr></thead>
+    <tbody>
+    {% for f in formset %}
+      <tr>
+        <td>{{ f.id }}{{ f.producto }}{% for e in f.producto.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</td>
+        <td>{{ f.cantidad }}{% for e in f.cantidad.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="text-muted small">Deja en blanco las filas que no uses.</p>
+  <div class="d-flex gap-2">
+    <button class="btn btn-acc">Guardar compra</button>
+    <a class="btn btn-outline-secondary" href="{% url 'compras:compra_lista' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
