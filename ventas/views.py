@@ -4,11 +4,12 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views import View
-from django.views.generic import ListView
+from django.views.generic import DetailView, ListView
 
 from inventario.models import MovimientoStock
 from inventario.servicios import registrar_movimiento
 from productos.models import Producto
+from usuarios.views import AdminRequeridoMixin
 
 from .models import DetalleVenta, Venta
 
@@ -93,3 +94,32 @@ class VentaListaView(LoginRequiredMixin, ListView):
         if not self.request.user.es_admin:  # el trabajador solo ve las suyas
             qs = qs.filter(usuario=self.request.user)
         return qs
+
+
+class VentaDetalleView(LoginRequiredMixin, DetailView):
+    """HU-18: comprobante."""
+    model = Venta
+    template_name = 'ventas/venta_detalle.html'
+
+    def get_queryset(self):
+        qs = Venta.objects.select_related('usuario').prefetch_related('detalles__producto')
+        if not self.request.user.es_admin:
+            qs = qs.filter(usuario=self.request.user)
+        return qs
+
+
+class VentaAnularView(AdminRequeridoMixin, View):
+    """HU-16: anula la venta y devuelve el stock."""
+
+    def post(self, request, pk):
+        with transaction.atomic():
+            venta = Venta.objects.select_for_update().get(pk=pk)
+            if venta.estado == Venta.Estado.ANULADA:
+                messages.error(request, 'La venta ya estaba anulada.')
+                return redirect('ventas:detalle', pk=pk)
+            for d in venta.detalles.select_related('producto'):
+                registrar_movimiento(d.producto, MovimientoStock.Tipo.ENTRADA, d.cantidad, f'Anulación venta {venta.pk}')
+            venta.estado = Venta.Estado.ANULADA
+            venta.save(update_fields=['estado'])
+        messages.success(request, 'Venta anulada y stock devuelto.')
+        return redirect('ventas:detalle', pk=pk)
