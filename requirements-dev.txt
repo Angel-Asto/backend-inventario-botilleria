@@ -1,0 +1,7 @@
+# Solo para desarrollo: servidor HTTPS local para usar la cámara del teléfono en la caja.
+# pip install -r requirements.txt -r requirements-dev.txt
+# python manage.py runserver_plus 0.0.0.0:8443 --cert-file certs/local.crt
+django-extensions==4.1
+Werkzeug==3.1.9
+cryptography==50.0.2
+pyOpenSSL==26.4.0

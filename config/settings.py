@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-*6^xf2tpq)n)l@yjfd^ikx@fzv-gu)rtqg9w_=$29i$+-!*e10
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# En desarrollo se acepta cualquier host para entrar desde el teléfono por la IP local (ej. https://192.168.1.10:8443).
+ALLOWED_HOSTS = ['*'] if DEBUG else []
 
 
 # Application definition
@@ -44,6 +45,14 @@ INSTALLED_APPS = [
     'ventas',
     'reportes',
 ]
+
+# Solo desarrollo (requirements-dev.txt): runserver_plus con HTTPS para usar la cámara del teléfono en la caja.
+if DEBUG:
+    try:
+        import django_extensions  # noqa: F401
+        INSTALLED_APPS.append('django_extensions')
+    except ImportError:
+        pass
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
