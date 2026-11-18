@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block titulo %}Eliminar proveedor | Botillería{% endblock %}
+{% block contenido %}
+<h1 class="h3 mb-3">Eliminar proveedor</h1>
+<form method="post" class="card card-body">
+  {% csrf_token %}
+  <p>¿Seguro que quieres eliminar a <strong>{{ object.nombre }}</strong>?</p>
+  <div class="d-flex gap-2">
+    <button class="btn btn-danger">Sí, eliminar</button>
+    <a class="btn btn-outline-secondary" href="{% url 'compras:proveedor_lista' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
