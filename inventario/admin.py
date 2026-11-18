@@ -1,3 +1,9 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import MovimientoStock
+
+
+@admin.register(MovimientoStock)
+class MovimientoStockAdmin(admin.ModelAdmin):
+    list_display = ('fecha', 'producto', 'tipo', 'cantidad', 'motivo')
+    list_filter = ('tipo',)
