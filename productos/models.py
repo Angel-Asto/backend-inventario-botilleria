@@ -7,6 +7,7 @@ class Categoria(models.Model):
         max_length=60, unique=True,
         error_messages={'unique': 'Ya existe una categoría con ese nombre.'},
     )
+    es_alcoholica = models.BooleanField(default=False, help_text='Pide confirmar mayoría de edad al vender.')
 
     class Meta:
         ordering = ['nombre']
