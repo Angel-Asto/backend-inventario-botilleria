@@ -30,6 +30,12 @@ class VentaTests(TestCase):
     def test_caja_requiere_login(self):
         self.assertEqual(self.client.get(self.url).status_code, 302)
 
+    def test_caja_ofrece_escaner_con_camara(self):
+        self.client.login(username='trab', password='x12345678')
+        r = self.client.get(self.url)
+        self.assertContains(r, 'id="btn-camara"')
+        self.assertContains(r, 'html5-qrcode@2.3.8')
+
     # --- buscador por código
     def test_buscar_producto_por_codigo(self):
         self.client.login(username='trab', password='x12345678')

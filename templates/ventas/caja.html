@@ -10,8 +10,14 @@
   <div class="col-lg-7">
     <div class="card card-body">
       <label class="form-label" for="escaner">Código de barras (escanea o escribe y presiona Enter)</label>
-      <input id="escaner" class="form-control form-control-lg" autocomplete="off" autofocus inputmode="numeric">
+      <div class="input-group input-group-lg">
+        <input id="escaner" class="form-control" autocomplete="off" autofocus inputmode="numeric">
+        <button type="button" class="btn btn-outline-dark" id="btn-camara" title="Escanear con la cámara">
+          <i class="bi bi-camera"></i> <span class="d-none d-sm-inline">Cámara</span>
+        </button>
+      </div>
       <div id="aviso" class="text-danger small mt-2"></div>
+      {% include 'includes/escaner_camara.html' %}
     </div>
   </div>
 
@@ -82,10 +88,16 @@
     document.getElementById('pagar').disabled = !hay;
   }
 
+  // Lector externo (USB/Bluetooth) o teclado: escribe el código y envía Enter.
   escaner.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    var codigo = escaner.value.trim(); escaner.value = ''; aviso.textContent = '';
+    var codigo = escaner.value.trim(); escaner.value = '';
+    agregar(codigo);
+  });
+
+  function agregar(codigo) {
+    aviso.textContent = '';
     if (!codigo) return;
     fetch(URL_BUSCAR + '?codigo=' + encodeURIComponent(codigo)).then(function (r) {
       return r.json().then(function (d) { return { ok: r.ok, d: d }; });
@@ -101,6 +113,15 @@
       }
       pintar();
     }).catch(function () { aviso.textContent = 'Error de conexión.'; });
+  }
+
+  // Cámara: queda abierta para escanear varios productos seguidos.
+  EscanerCamara.conectar({
+    boton: document.getElementById('btn-camara'),
+    panel: document.getElementById('panel-camara'),
+    aviso: aviso,
+    continuo: true,
+    alLeer: agregar,
   });
 })();
 </script>
