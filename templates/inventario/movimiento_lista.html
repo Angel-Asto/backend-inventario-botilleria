@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block titulo %}Historial de movimientos | Botillería{% endblock %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 m-0">Historial de movimientos</h1>
+  <span class="badge bg-secondary">HU-12</span>
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-5"><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Producto o motivo"></div>
+  <div class="col-md-3">
+    <select class="form-select" name="tipo">
+      <option value="">Todos los tipos</option>
+      {% for valor, nombre in tipos %}<option value="{{ valor }}" {% if request.GET.tipo == valor %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-acc">Filtrar</button></div>
+</form>
+
+<div class="table-responsive">
+<table class="table table-striped align-middle">
+  <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
+  <tbody>
+  {% for m in object_list %}
+    <tr>
+      <td>{{ m.fecha|date:"d/m/Y H:i" }}</td><td>{{ m.producto.nombre }}</td>
+      <td><span class="badge {% if m.tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}">{{ m.get_tipo_display }}</span></td>
+      <td>{{ m.cantidad }}</td><td>{{ m.motivo }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="text-center text-muted">Sin movimientos.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if is_paginated %}
+<nav><ul class="pagination">
+  {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ qs }}">Anterior</a></li>{% endif %}
+  <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages }}</span></li>
+  {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ qs }}">Siguiente</a></li>{% endif %}
+</ul></nav>
+{% endif %}
+{% endblock %}
