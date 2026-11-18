@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block titulo %}Compra {{ object.pk }} | Botillería{% endblock %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 m-0">Compra N° {{ object.pk }}</h1>
+  <a class="btn btn-outline-secondary" href="{% url 'compras:compra_lista' %}">Volver</a>
+</div>
+<div class="card card-body">
+  <p class="mb-1"><strong>Proveedor:</strong> {{ object.proveedor }}</p>
+  <p><strong>Fecha:</strong> {{ object.fecha|date:"d/m/Y" }}</p>
+  <table class="table">
+    <thead><tr><th>Producto</th><th>Cantidad</th></tr></thead>
+    <tbody>{% for d in object.detalles.all %}<tr><td>{{ d.producto }}</td><td>{{ d.cantidad }}</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

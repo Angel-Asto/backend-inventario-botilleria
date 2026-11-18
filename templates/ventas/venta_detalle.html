@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block titulo %}Venta {{ object.pk }} | Botillería{% endblock %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 m-0">Comprobante de venta N° {{ object.pk }}</h1>
+  <span class="badge bg-secondary">HU-16 · HU-18</span>
+</div>
+<div class="card card-body">
+  <p class="mb-1"><strong>Fecha:</strong> {{ object.fecha|date:"d/m/Y" }}</p>
+  <p class="mb-1"><strong>Vendedor:</strong> {{ object.usuario.username }}</p>
+  <p class="mb-1"><strong>Pago:</strong> {{ object.get_medio_pago_display }}</p>
+  <p><strong>Estado:</strong> <span class="badge {% if object.estado == 'anulada' %}bg-secondary{% else %}bg-success{% endif %}">{{ object.get_estado_display }}</span></p>
+  <table class="table">
+    <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th class="text-end">Subtotal</th></tr></thead>
+    <tbody>
+    {% for d in object.detalles.all %}
+      <tr><td>{{ d.producto }}</td><td>{{ d.cantidad }}</td><td>${{ d.precio_unitario }}</td><td class="text-end">${{ d.subtotal }}</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="3">Total</th><th class="text-end">${{ object.total }}</th></tr></tfoot>
+  </table>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'ventas:lista' %}">Volver</a>
+    <button class="btn btn-outline-dark" onclick="window.print()">Imprimir</button>
+    {% if user.es_admin and object.estado == 'completada' %}
+    <form method="post" action="{% url 'ventas:anular' object.pk %}" onsubmit="return confirm('¿Anular esta venta? El stock volverá al inventario.');">
+      {% csrf_token %}<button class="btn btn-danger">Anular venta</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

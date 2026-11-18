@@ -18,12 +18,20 @@
 
     <div class="grp">Operación</div>
     <a class="m" href="{% url 'usuarios:inicio' %}"><i class="bi bi-speedometer2"></i><span>Panel</span></a>
+    <a class="m" href="{% url 'ventas:caja' %}"><i class="bi bi-upc-scan"></i><span>Nueva venta</span></a>
+    <a class="m" href="{% url 'ventas:lista' %}"><i class="bi bi-receipt"></i><span>Historial de ventas</span></a>
 
     <div class="grp">Inventario</div>
     <a class="m" href="{% url 'productos:lista' %}"><i class="bi bi-box-seam"></i><span>Productos</span></a>
+    <a class="m" href="{% url 'inventario:stock' %}"><i class="bi bi-clipboard-data"></i><span>Stock actual</span></a>
+    {% if user.es_admin %}
+    <a class="m" href="{% url 'inventario:movimientos' %}"><i class="bi bi-arrow-left-right"></i><span>Historial de movimientos</span></a>
+    {% endif %}
 
     {% if user.es_admin %}
     <div class="grp">Administración</div>
+    <a class="m" href="{% url 'compras:compra_lista' %}"><i class="bi bi-cart-plus"></i><span>Compras</span></a>
+    <a class="m" href="{% url 'compras:proveedor_lista' %}"><i class="bi bi-truck"></i><span>Proveedores</span></a>
     <a class="m" href="{% url 'usuarios:lista' %}"><i class="bi bi-people"></i><span>Usuarios</span></a>
     {% endif %}
 
