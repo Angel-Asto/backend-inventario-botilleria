@@ -29,6 +29,14 @@ class ProductoTests(TestCase):
         self.assertEqual(self.client.get(reverse('productos:lista')).status_code, 200)
         self.assertEqual(self.client.get(reverse('productos:crear')).status_code, 403)
 
+    def test_formulario_producto_ofrece_escaner_con_camara(self):
+        self.client.login(username='admin1', password=CLAVE)
+        r = self.client.get(reverse('productos:crear'))
+        self.assertContains(r, 'html5-qrcode@2.3.8')
+        self.assertContains(r, 'EscanerCamara.conectar')
+        # El formulario de categoría usa la misma plantilla pero no tiene código de barras.
+        self.assertNotContains(self.client.get(reverse('productos:categoria_crear')), 'html5-qrcode')
+
     def test_admin_crea_producto(self):
         self.client.login(username='admin1', password=CLAVE)
         self.client.post(reverse('productos:crear'), self.datos())
