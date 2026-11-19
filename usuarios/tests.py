@@ -73,3 +73,81 @@ class PaginasDeErrorTests(TestCase):
         self.client.login(username='trab', password=CLAVE)
         r = self.client.get(reverse('usuarios:lista'))
         self.assertContains(r, 'No tienes permiso', status_code=403)
+
+
+class SesionTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.trab = Usuario.objects.create_user('trab', password=CLAVE, rol='trabajador')
+
+    def setUp(self):
+        cache.clear()
+
+    def test_panel_exige_login(self):
+        r = self.client.get(reverse('usuarios:inicio'))
+        self.assertRedirects(r, f"{reverse('usuarios:iniciar_sesion')}?next=/")
+
+    def test_login_correcto_redirige_al_panel(self):
+        r = self.client.post(reverse('usuarios:iniciar_sesion'), {'username': 'trab', 'password': CLAVE})
+        self.assertRedirects(r, reverse('usuarios:inicio'))
+
+    def test_login_no_redirige_a_sitios_externos(self):
+        r = self.client.post(reverse('usuarios:iniciar_sesion') + '?next=https://malicioso.example',
+                             {'username': 'trab', 'password': CLAVE, 'next': 'https://malicioso.example'})
+        self.assertRedirects(r, reverse('usuarios:inicio'))
+
+    def test_logout_solo_por_post(self):
+        self.client.login(username='trab', password=CLAVE)
+        self.assertEqual(self.client.get(reverse('usuarios:cerrar_sesion')).status_code, 405)
+        self.client.post(reverse('usuarios:cerrar_sesion'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_cambio_de_contrasena_exige_la_actual(self):
+        self.client.login(username='trab', password=CLAVE)
+        url = reverse('usuarios:cambiar_contrasena')
+        self.client.post(url, {'old_password': 'equivocada', 'new_password1': 'Otra-clave-456', 'new_password2': 'Otra-clave-456'})
+        self.trab.refresh_from_db()
+        self.assertTrue(self.trab.check_password(CLAVE))
+        self.client.post(url, {'old_password': CLAVE, 'new_password1': 'Otra-clave-456', 'new_password2': 'Otra-clave-456'})
+        self.trab.refresh_from_db()
+        self.assertTrue(self.trab.check_password('Otra-clave-456'))
+
+    def test_cambio_de_contrasena_exige_login(self):
+        self.assertEqual(self.client.get(reverse('usuarios:cambiar_contrasena')).status_code, 302)
+
+
+class GestionUsuariosTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = Usuario.objects.create_user('adm', password=CLAVE, rol='admin')
+        cls.trab = Usuario.objects.create_user('trab', password=CLAVE, rol='trabajador')
+
+    def datos(self, **extra):
+        d = {'username': 'nuevo', 'first_name': 'Ana', 'last_name': 'Pérez', 'email': 'ana@example.com',
+             'rol': 'trabajador', 'password1': 'Clave-nueva-789', 'password2': 'Clave-nueva-789'}
+        d.update(extra)
+        return d
+
+    def test_trabajador_no_ve_ni_crea_usuarios(self):
+        self.client.login(username='trab', password=CLAVE)
+        self.assertEqual(self.client.get(reverse('usuarios:lista')).status_code, 403)
+        self.assertEqual(self.client.post(reverse('usuarios:crear'), self.datos(rol='admin')).status_code, 403)
+        self.assertFalse(Usuario.objects.filter(username='nuevo').exists())
+
+    def test_admin_crea_trabajador(self):
+        self.client.login(username='adm', password=CLAVE)
+        r = self.client.post(reverse('usuarios:crear'), self.datos())
+        self.assertRedirects(r, reverse('usuarios:lista'))
+        nuevo = Usuario.objects.get(username='nuevo')
+        self.assertEqual(nuevo.rol, 'trabajador')
+        self.assertFalse(nuevo.es_admin)
+        self.assertFalse(nuevo.is_staff)  # no entra al admin de Django
+
+    def test_contrasena_debil_se_rechaza(self):
+        self.client.login(username='adm', password=CLAVE)
+        self.client.post(reverse('usuarios:crear'), self.datos(password1='12345678', password2='12345678'))
+        self.assertFalse(Usuario.objects.filter(username='nuevo').exists())
+
+    def test_superusuario_cuenta_como_admin(self):
+        su = Usuario.objects.create_superuser('root', password=CLAVE)
+        self.assertTrue(su.es_admin)
