@@ -42,6 +42,21 @@ class ProductoTests(TestCase):
         self.client.post(reverse('productos:crear'), self.datos())
         self.assertTrue(Producto.objects.filter(codigo_barras='9999').exists())
 
+    def test_stock_inicial_queda_como_movimiento(self):
+        from inventario.models import MovimientoStock
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:crear'), self.datos(stock=10))
+        p = Producto.objects.get(codigo_barras='9999')
+        self.assertEqual(p.stock, 10)
+        m = MovimientoStock.objects.get(producto=p)
+        self.assertEqual((m.tipo, m.cantidad, m.motivo), ('entrada', 10, 'Stock inicial'))
+
+    def test_producto_sin_stock_inicial_no_deja_movimiento(self):
+        from inventario.models import MovimientoStock
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:crear'), self.datos(stock=0))
+        self.assertFalse(MovimientoStock.objects.exists())
+
     def test_codigo_de_barras_no_se_repite(self):
         self.client.login(username='admin1', password=CLAVE)
         r = self.client.post(reverse('productos:crear'), self.datos(codigo_barras='7802'))
