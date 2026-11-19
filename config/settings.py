@@ -132,9 +132,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-cl'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Santiago'
 
 USE_I18N = True
 
@@ -145,6 +145,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # destino de "collectstatic" al desplegar
 
 
 # Email
@@ -152,17 +154,38 @@ STATIC_URL = 'static/'
 
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        # En desarrollo los correos se muestran en la consola; en producción se usa SMTP.
+        'BACKEND': ('django.core.mail.backends.console.EmailBackend' if DEBUG
+                    else 'django.core.mail.backends.smtp.EmailBackend'),
     },
 }
 
 
 AUTH_USER_MODEL = 'usuarios.Usuario'      # antes de la primera migración
 
-LANGUAGE_CODE = 'es-cl'
-TIME_ZONE = 'America/Santiago'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-
 LOGIN_URL = 'usuarios:iniciar_sesion'
 LOGIN_REDIRECT_URL = 'usuarios:inicio'
 LOGOUT_REDIRECT_URL = 'usuarios:iniciar_sesion'
+
+
+# Sesión: el PC de la caja suele ser compartido.
+SESSION_COOKIE_AGE = 8 * 60 * 60          # un turno de 8 horas
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True    # cerrar el navegador cierra la sesión
+SESSION_COOKIE_HTTPONLY = True            # el JavaScript no puede leer la cookie de sesión
+SESSION_COOKIE_SAMESITE = 'Lax'
+X_FRAME_OPTIONS = 'DENY'                  # evita que la app se cargue dentro de un iframe (clickjacking)
+
+# Producción (DEBUG=False): todo por HTTPS.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() == 'true'
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '3600'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+    # Detrás de un proxy o túnel HTTPS (ngrok, cloudflared) que envía X-Forwarded-Proto.
+    if os.environ.get('DETRAS_DE_PROXY', 'False').lower() == 'true':
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # HSTS en subdominios y "preload" son difíciles de revertir: se activan solo con un dominio propio definitivo.
+    SILENCED_SYSTEM_CHECKS = ['security.W005', 'security.W021']
