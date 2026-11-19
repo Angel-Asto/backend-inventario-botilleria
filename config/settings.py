@@ -168,6 +168,28 @@ LOGIN_REDIRECT_URL = 'usuarios:inicio'
 LOGOUT_REDIRECT_URL = 'usuarios:iniciar_sesion'
 
 
+# Registro de eventos de seguridad (logins fallidos, bloqueos, accesos denegados, errores 500).
+(BASE_DIR / 'logs').mkdir(exist_ok=True)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {'simple': {'format': '{asctime} {levelname} {name}: {message}', 'style': '{'}},
+    'handlers': {
+        'archivo': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'seguridad.log',
+            'maxBytes': 1_000_000, 'backupCount': 3, 'encoding': 'utf-8', 'formatter': 'simple',
+        },
+        'consola': {'class': 'logging.StreamHandler', 'formatter': 'simple'},
+    },
+    'loggers': {
+        'seguridad': {'handlers': ['archivo', 'consola'], 'level': 'INFO', 'propagate': False},
+        'django.security': {'handlers': ['archivo', 'consola'], 'level': 'WARNING', 'propagate': False},
+        'django.request': {'handlers': ['archivo'], 'level': 'ERROR', 'propagate': True},
+    },
+}
+
+
 # Sesión: el PC de la caja suele ser compartido.
 SESSION_COOKIE_AGE = 8 * 60 * 60          # un turno de 8 horas
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True    # cerrar el navegador cierra la sesión

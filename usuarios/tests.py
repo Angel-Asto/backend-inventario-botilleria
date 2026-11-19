@@ -1,15 +1,25 @@
-from django.contrib.auth.views import LogoutView
-from django.urls import path
+from django.test import TestCase
+from django.urls import reverse
 
-from . import views
+from .models import Usuario
 
-app_name = 'usuarios'
+CLAVE = 'Clave-segura-123'
 
-urlpatterns = [
-    path('', views.InicioView.as_view(), name='inicio'),
-    path('iniciar-sesion/', views.IniciarSesionView.as_view(), name='iniciar_sesion'),
-    path('cerrar-sesion/', LogoutView.as_view(), name='cerrar_sesion'),
-    path('cambiar-contrasena/', views.CambiarContrasenaView.as_view(), name='cambiar_contrasena'),
-    path('usuarios/', views.UsuarioListaView.as_view(), name='lista'),
-    path('usuarios/nuevo/', views.UsuarioCrearView.as_view(), name='crear'),
-]
+
+class PaginasDeErrorTests(TestCase):
+    """Las páginas de error son propias y no muestran información interna."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.trab = Usuario.objects.create_user('trab', password=CLAVE, rol='trabajador')
+
+    def test_404_propio_sin_rutas_internas(self):
+        self.client.login(username='trab', password=CLAVE)
+        r = self.client.get('/no-existe/')
+        self.assertContains(r, 'Página no encontrada', status_code=404)
+        self.assertNotContains(r, 'URLconf', status_code=404)
+
+    def test_403_propio(self):
+        self.client.login(username='trab', password=CLAVE)
+        r = self.client.get(reverse('usuarios:lista'))
+        self.assertContains(r, 'No tienes permiso', status_code=403)
