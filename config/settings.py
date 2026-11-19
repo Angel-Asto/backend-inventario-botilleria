@@ -10,23 +10,35 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# La configuración sensible se lee del archivo .env (no se sube al repositorio). Ver .env.example.
+load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-*6^xf2tpq)n)l@yjfd^ikx@fzv-gu)rtqg9w_=$29i$+-!*e10'
+def _lista(nombre, defecto=''):
+    """Lee una variable de entorno con valores separados por coma."""
+    return [v.strip() for v in os.environ.get(nombre, defecto).split(',') if v.strip()]
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-# En desarrollo se acepta cualquier host para entrar desde el teléfono por la IP local (ej. https://192.168.1.10:8443).
-ALLOWED_HOSTS = ['*'] if DEBUG else []
+# Seguro por defecto: sin .env el sistema arranca con DEBUG apagado.
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('1', 'true', 'si', 'sí', 'yes')
+
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
+if not SECRET_KEY:
+    raise ImproperlyConfigured('Falta SECRET_KEY en el archivo .env (copia .env.example y genera una clave).')
+
+# Para entrar desde el teléfono por la IP local, agrega esa IP en ALLOWED_HOSTS del .env.
+ALLOWED_HOSTS = _lista('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+CSRF_TRUSTED_ORIGINS = _lista('CSRF_TRUSTED_ORIGINS')
 
 
 # Application definition
@@ -88,12 +100,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# DATABASE_URL permite pasar a PostgreSQL sin tocar código (ej. postgres://usuario:clave@host:5432/botilleria).
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(default=f'sqlite:///{BASE_DIR / "db.sqlite3"}', conn_max_age=600),
 }
+if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    # SQLite no bloquea filas: IMMEDIATE toma el bloqueo de escritura al iniciar la transacción,
+    # así dos ventas simultáneas esperan su turno (timeout) en vez de fallar con "database is locked".
+    DATABASES['default']['OPTIONS'] = {'transaction_mode': 'IMMEDIATE', 'timeout': 20}
 
 
 # Password validation
