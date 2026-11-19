@@ -11,7 +11,7 @@
   <tbody>
   {% for v in object_list %}
     <tr>
-      <td>{{ v.pk }}</td><td>{{ v.fecha|date:"d/m/Y" }}</td><td>{{ v.usuario.username }}</td>
+      <td>{{ v.pk }}</td><td>{{ v.creada_en|date:"d/m/Y H:i" }}</td><td>{{ v.usuario.username }}</td>
       <td>{{ v.get_medio_pago_display }}</td><td>${{ v.total }}</td>
       <td><span class="badge {% if v.estado == 'anulada' %}bg-secondary{% else %}bg-success{% endif %}">{{ v.get_estado_display }}</span></td>
       <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'ventas:detalle' v.pk %}">Comprobante</a></td>

@@ -6,7 +6,7 @@
   <span class="badge bg-secondary">HU-16 · HU-18</span>
 </div>
 <div class="card card-body">
-  <p class="mb-1"><strong>Fecha:</strong> {{ object.fecha|date:"d/m/Y" }}</p>
+  <p class="mb-1"><strong>Fecha:</strong> {{ object.creada_en|date:"d/m/Y H:i" }}</p>
   <p class="mb-1"><strong>Vendedor:</strong> {{ object.usuario.username }}</p>
   <p class="mb-1"><strong>Pago:</strong> {{ object.get_medio_pago_display }}</p>
   <p><strong>Estado:</strong> <span class="badge {% if object.estado == 'anulada' %}bg-secondary{% else %}bg-success{% endif %}">{{ object.get_estado_display }}</span></p>

@@ -220,3 +220,11 @@ class VentaTests(TestCase):
         self.client.login(username='adm', password='x12345678')
         self.assertEqual(len(self.client.get(reverse('ventas:lista')).context['object_list']), 1)
         self.assertContains(self.client.get(reverse('ventas:detalle', args=[v.pk])), 'Anular venta')
+
+    def test_comprobante_muestra_la_hora(self):
+        from django.utils import timezone
+        v = self.crear_venta()
+        self.assertLess((timezone.now() - v.creada_en).total_seconds(), 60)
+        self.client.login(username='trab', password='x12345678')
+        hora = timezone.localtime(v.creada_en).strftime('%H:%M')
+        self.assertContains(self.client.get(reverse('ventas:detalle', args=[v.pk])), hora)

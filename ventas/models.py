@@ -15,6 +15,7 @@ class Venta(models.Model):
 
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ventas')
     fecha = models.DateField(default=timezone.localdate)
+    creada_en = models.DateTimeField(default=timezone.now, editable=False)  # hora exacta (cierre de caja, reportes)
     medio_pago = models.CharField(max_length=20, choices=MedioPago.choices)
     total = models.PositiveIntegerField(default=0)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.COMPLETADA)
