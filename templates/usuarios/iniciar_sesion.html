@@ -9,7 +9,8 @@
       <div class="logo"><i class="bi bi-shop"></i></div>
       <h1 class="h4 text-center mb-1">Iniciar sesión</h1>
       <p class="text-center text-muted">Sistema de Inventario y Ventas</p>
-      {% if form.non_field_errors %}<div class="alert alert-warning">Usuario o contraseña incorrectos.</div>{% endif %}
+      {% if form.bloqueado %}<div class="alert alert-warning" role="alert">{{ form.non_field_errors.0 }}</div>
+      {% elif form.non_field_errors %}<div class="alert alert-warning" role="alert">Usuario o contraseña incorrectos.</div>{% endif %}
       <form method="post">{% csrf_token %}
         {% include 'includes/campos.html' %}
         <input type="hidden" name="next" value="{{ next }}">
