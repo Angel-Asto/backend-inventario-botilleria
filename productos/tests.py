@@ -105,3 +105,12 @@ class ReglasEnBaseDeDatosTests(TestCase):
         p = Producto.objects.create(categoria=cat, codigo_barras='1', nombre='Uno', precio=100)
         with self.assertRaises(IntegrityError), transaction.atomic():
             MovimientoStock.objects.create(producto=p, tipo='entrada', cantidad=0, motivo='x')
+
+
+class FormatoPesosTests(TestCase):
+    def test_formato_chileno(self):
+        from productos.templatetags.formato import pesos
+        self.assertEqual(pesos(1990), '$1.990')
+        self.assertEqual(pesos(1234567), '$1.234.567')
+        self.assertEqual(pesos(0), '$0')
+        self.assertEqual(pesos('texto'), 'texto')
