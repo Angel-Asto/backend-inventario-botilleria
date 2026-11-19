@@ -72,7 +72,7 @@ class CompraListaView(AdminRequeridoMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Compra.objects.select_related('proveedor').prefetch_related('detalles')
+        return Compra.objects.select_related('proveedor', 'registrada_por').prefetch_related('detalles')
 
 
 class CompraCrearView(AdminRequeridoMixin, View):
@@ -87,7 +87,9 @@ class CompraCrearView(AdminRequeridoMixin, View):
         formset = DetalleCompraFormSet(request.POST, instance=Compra())
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
-                compra = form.save()
+                compra = form.save(commit=False)
+                compra.registrada_por = request.user
+                compra.save()
                 formset.instance = compra
                 detalles = formset.save()
                 for d in detalles:
@@ -101,3 +103,6 @@ class CompraCrearView(AdminRequeridoMixin, View):
 class CompraDetalleView(AdminRequeridoMixin, DetailView):
     model = Compra
     template_name = 'compras/compra_detalle.html'
+
+    def get_queryset(self):
+        return Compra.objects.select_related('proveedor', 'registrada_por').prefetch_related('detalles__producto')

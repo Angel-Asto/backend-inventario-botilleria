@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -18,6 +19,9 @@ class Proveedor(models.Model):
 class Compra(models.Model):
     proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='compras')
     fecha = models.DateField(default=timezone.localdate)
+    # Quién la registró (auditoría). Vacío en compras anteriores a este campo.
+    registrada_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                       related_name='compras_registradas', editable=False)
 
     class Meta:
         ordering = ['-fecha', '-pk']
