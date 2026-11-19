@@ -92,3 +92,16 @@ class ProductoTests(TestCase):
         self.client.login(username='admin1', password=CLAVE)
         self.client.post(reverse('productos:categoria_eliminar', args=[self.cat.pk]))
         self.assertTrue(Categoria.objects.filter(pk=self.cat.pk).exists())
+
+class ReglasEnBaseDeDatosTests(TestCase):
+    """Las reglas se cumplen aunque los datos no vengan del formulario (admin, scripts, fixtures)."""
+
+    def test_precio_cero_y_cantidades_cero_se_rechazan_en_la_bd(self):
+        from django.db import IntegrityError, transaction
+        from inventario.models import MovimientoStock
+        cat = Categoria.objects.create(nombre='X')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Producto.objects.create(categoria=cat, codigo_barras='0', nombre='Gratis', precio=0)
+        p = Producto.objects.create(categoria=cat, codigo_barras='1', nombre='Uno', precio=100)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            MovimientoStock.objects.create(producto=p, tipo='entrada', cantidad=0, motivo='x')

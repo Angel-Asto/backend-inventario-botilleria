@@ -35,5 +35,10 @@ class DetalleCompra(models.Model):
     producto = models.ForeignKey('productos.Producto', on_delete=models.PROTECT, related_name='detalles_compra')
     cantidad = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(cantidad__gte=1), name='detallecompra_cantidad_positiva'),
+        ]
+
     def __str__(self):
         return f'{self.cantidad} x {self.producto}'

@@ -14,6 +14,9 @@ class MovimientoStock(models.Model):
 
     class Meta:
         ordering = ['-fecha', '-pk']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(cantidad__gte=1), name='movimiento_cantidad_positiva'),
+        ]
 
     def __str__(self):
         return f'{self.get_tipo_display()} {self.cantidad} - {self.producto}'

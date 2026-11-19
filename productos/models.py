@@ -30,6 +30,9 @@ class Producto(models.Model):
 
     class Meta:
         ordering = ['nombre']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(precio__gte=1), name='producto_precio_positivo'),
+        ]
 
     @property
     def stock_bajo(self):

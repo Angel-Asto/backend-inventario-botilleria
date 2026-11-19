@@ -32,6 +32,11 @@ class DetalleVenta(models.Model):
     cantidad = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     precio_unitario = models.PositiveIntegerField()
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(cantidad__gte=1), name='detalleventa_cantidad_positiva'),
+        ]
+
     @property
     def subtotal(self):
         return self.cantidad * self.precio_unitario
