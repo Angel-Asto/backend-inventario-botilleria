@@ -1,0 +1,205 @@
+[
+  {
+    "model": "productos.categoria",
+    "fields": {
+      "nombre": "Cervezas",
+      "es_alcoholica": true
+    }
+  },
+  {
+    "model": "productos.categoria",
+    "fields": {
+      "nombre": "Vinos",
+      "es_alcoholica": true
+    }
+  },
+  {
+    "model": "productos.categoria",
+    "fields": {
+      "nombre": "Destilados",
+      "es_alcoholica": true
+    }
+  },
+  {
+    "model": "productos.categoria",
+    "fields": {
+      "nombre": "Bebidas",
+      "es_alcoholica": false
+    }
+  },
+  {
+    "model": "productos.categoria",
+    "fields": {
+      "nombre": "Snacks",
+      "es_alcoholica": false
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Cervezas"
+      ],
+      "codigo_barras": "7800000000016",
+      "nombre": "Cerveza Lager 470cc",
+      "precio": 1290,
+      "stock": 0,
+      "stock_minimo": 12,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Cervezas"
+      ],
+      "codigo_barras": "7800000000023",
+      "nombre": "Cerveza Ale 355cc",
+      "precio": 1490,
+      "stock": 0,
+      "stock_minimo": 12,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Cervezas"
+      ],
+      "codigo_barras": "7800000000030",
+      "nombre": "Cerveza Negra 330cc",
+      "precio": 1190,
+      "stock": 0,
+      "stock_minimo": 6,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Vinos"
+      ],
+      "codigo_barras": "7800000000047",
+      "nombre": "Vino Tinto Reserva 750cc",
+      "precio": 5990,
+      "stock": 0,
+      "stock_minimo": 6,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Vinos"
+      ],
+      "codigo_barras": "7800000000054",
+      "nombre": "Vino Blanco 750cc",
+      "precio": 4990,
+      "stock": 0,
+      "stock_minimo": 6,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Destilados"
+      ],
+      "codigo_barras": "7800000000061",
+      "nombre": "Pisco 35° 750cc",
+      "precio": 7990,
+      "stock": 0,
+      "stock_minimo": 4,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Destilados"
+      ],
+      "codigo_barras": "7800000000078",
+      "nombre": "Ron Añejo 750cc",
+      "precio": 9990,
+      "stock": 0,
+      "stock_minimo": 3,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Bebidas"
+      ],
+      "codigo_barras": "7800000000085",
+      "nombre": "Bebida Cola 1.5L",
+      "precio": 1990,
+      "stock": 0,
+      "stock_minimo": 10,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Bebidas"
+      ],
+      "codigo_barras": "7800000000092",
+      "nombre": "Agua Mineral 1.6L",
+      "precio": 990,
+      "stock": 0,
+      "stock_minimo": 10,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Bebidas"
+      ],
+      "codigo_barras": "7800000000108",
+      "nombre": "Jugo Naranja 1L",
+      "precio": 1590,
+      "stock": 0,
+      "stock_minimo": 6,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Snacks"
+      ],
+      "codigo_barras": "7800000000115",
+      "nombre": "Papas Fritas 150g",
+      "precio": 1890,
+      "stock": 0,
+      "stock_minimo": 8,
+      "activo": true
+    }
+  },
+  {
+    "model": "productos.producto",
+    "fields": {
+      "categoria": [
+        "Snacks"
+      ],
+      "codigo_barras": "7800000000122",
+      "nombre": "Maní Salado 200g",
+      "precio": 1490,
+      "stock": 0,
+      "stock_minimo": 8,
+      "activo": true
+    }
+  }
+]

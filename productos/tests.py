@@ -114,3 +114,23 @@ class FormatoPesosTests(TestCase):
         self.assertEqual(pesos(1234567), '$1.234.567')
         self.assertEqual(pesos(0), '$0')
         self.assertEqual(pesos('texto'), 'texto')
+
+
+class FixtureCatalogoTests(TestCase):
+    def test_catalogo_se_carga_dos_veces_sin_duplicar(self):
+        from django.core.management import call_command
+        call_command('loaddata', 'catalogo', verbosity=0)
+        call_command('loaddata', 'catalogo', verbosity=0)
+        self.assertEqual(Categoria.objects.count(), 5)
+        self.assertEqual(Producto.objects.count(), 12)
+        self.assertTrue(Categoria.objects.get(nombre='Vinos').es_alcoholica)
+        self.assertFalse(Producto.objects.filter(stock__gt=0).exists())  # el stock entra con movimientos
+
+    def test_codigos_de_barras_son_ean13_validos(self):
+        import json
+        from pathlib import Path
+        datos = json.loads((Path(__file__).parent / 'fixtures' / 'catalogo.json').read_text(encoding='utf-8'))
+        for d in (x for x in datos if x['model'] == 'productos.producto'):
+            c = d['fields']['codigo_barras']
+            suma = sum(int(n) * (3 if i % 2 else 1) for i, n in enumerate(c[:12]))
+            self.assertEqual((10 - suma % 10) % 10, int(c[12]), c)
