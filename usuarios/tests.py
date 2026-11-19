@@ -182,3 +182,61 @@ class PanelTests(TestCase):
         r = self.client.get(reverse('usuarios:inicio'))
         self.assertEqual((r.context['ventas_hoy_total'], r.context['ventas_hoy_cantidad']), (3000, 1))
         self.assertTrue(all(v.usuario == self.trab for v in r.context['ultimas_ventas']))
+
+
+class SeedDemoTests(TestCase):
+    """seed_demo: idempotente, coherente con el stock y solo en desarrollo."""
+
+    CLAVES = {'DEMO_ADMIN_PASSWORD': 'Prueba-Admin-987', 'DEMO_WORKER_PASSWORD': 'Prueba-Caja-987'}
+
+    def correr(self, *args):
+        import io
+        import os
+        from unittest import mock
+
+        from django.core.management import call_command
+        from django.test import override_settings
+        salida = io.StringIO()
+        with override_settings(DEBUG=True), mock.patch.dict(os.environ, self.CLAVES):
+            call_command('seed_demo', *args, stdout=salida)
+        return salida.getvalue()
+
+    def conteos(self):
+        from compras.models import Compra, Proveedor
+        from inventario.models import MovimientoStock
+        from productos.models import Categoria, Producto
+        from ventas.models import Venta
+        return [m.objects.count() for m in (Usuario, Categoria, Producto, Proveedor, Compra, Venta, MovimientoStock)]
+
+    def test_es_idempotente(self):
+        self.correr()
+        primera = self.conteos()
+        self.correr()
+        self.assertEqual(self.conteos(), primera)
+        self.assertEqual(primera[:6], [2, 5, 12, 2, 1, 1])
+
+    def test_stock_cuadra_con_los_movimientos(self):
+        from django.db.models import Q, Sum
+
+        from productos.models import Producto
+        self.correr()
+        self.correr()
+        for p in Producto.objects.annotate(
+                entradas=Sum('movimientos__cantidad', filter=Q(movimientos__tipo='entrada'), default=0),
+                salidas=Sum('movimientos__cantidad', filter=Q(movimientos__tipo='salida'), default=0)):
+            self.assertEqual(p.stock, p.entradas - p.salidas, p.nombre)
+
+    def test_usuarios_con_rol_y_clave_del_entorno_sin_imprimirla(self):
+        salida = self.correr('--solo-catalogo')
+        self.assertTrue(Usuario.objects.get(username='admin_demo').es_admin)
+        self.assertFalse(Usuario.objects.get(username='trabajador_demo').es_admin)
+        self.assertTrue(self.client.login(username='trabajador_demo', password=self.CLAVES['DEMO_WORKER_PASSWORD']))
+        for clave in self.CLAVES.values():
+            self.assertNotIn(clave, salida)
+
+    def test_se_niega_con_debug_apagado(self):
+        from django.core.management import CommandError, call_command
+        from django.test import override_settings
+        with override_settings(DEBUG=False), self.assertRaises(CommandError):
+            call_command('seed_demo')
+        self.assertFalse(Usuario.objects.filter(username='admin_demo').exists())
