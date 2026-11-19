@@ -111,6 +111,20 @@ class VentaTests(TestCase):
         self.vender(['222'], ['-5'])
         self.assertEqual(Venta.objects.count(), 0)
 
+    def test_cantidades_raras_no_provocan_error_500(self):
+        self.client.login(username='trab', password='x12345678')
+        for cantidad in ('9' * 25, '1.5', '²', 'abc', ''):
+            r = self.vender(['222'], [cantidad])
+            self.assertEqual(r.status_code, 200, cantidad)
+        self.assertEqual(Venta.objects.count(), 0)
+
+    def test_cantidad_sobre_el_maximo_se_rechaza(self):
+        self.client.login(username='trab', password='x12345678')
+        r = self.vender(['222'], ['1000'])
+        self.assertContains(r, 'La cantidad máxima por producto es 999')
+        self.cola.refresh_from_db()
+        self.assertEqual(self.cola.stock, 3)
+
     # --- anular
     def crear_venta(self):
         self.client.login(username='trab', password='x12345678')

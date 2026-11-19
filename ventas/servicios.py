@@ -7,6 +7,9 @@ from productos.models import Producto
 from .models import DetalleVenta, Venta
 
 
+MAX_CANTIDAD_POR_PRODUCTO = 999
+
+
 class VentaInvalida(ValueError):
     """La venta no cumple una regla de negocio; el mensaje se muestra al cajero."""
 
@@ -19,6 +22,8 @@ def registrar_venta(usuario, items, medio_pago, mayor_edad=False):
     """
     if not items:
         raise VentaInvalida('Escanea al menos un producto.')
+    if any(n > MAX_CANTIDAD_POR_PRODUCTO for n in items.values()):
+        raise VentaInvalida(f'La cantidad máxima por producto es {MAX_CANTIDAD_POR_PRODUCTO}.')
     productos = {p.codigo_barras: p for p in
                  Producto.objects.select_related('categoria').filter(codigo_barras__in=items, activo=True)}
     if len(productos) != len(items):

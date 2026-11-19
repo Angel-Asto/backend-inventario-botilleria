@@ -9,7 +9,7 @@ from productos.models import Producto
 from usuarios.views import AdminRequeridoMixin
 
 from .models import Venta
-from .servicios import VentaInvalida, anular_venta, registrar_venta
+from .servicios import MAX_CANTIDAD_POR_PRODUCTO, VentaInvalida, anular_venta, registrar_venta
 
 
 def _datos_producto(p):
@@ -40,11 +40,13 @@ class CajaView(LoginRequiredMixin, View):
     def post(self, request):
         items = {}
         for codigo, cantidad in zip(request.POST.getlist('codigo'), request.POST.getlist('cantidad')):
-            try:
-                n = int(cantidad)
-            except ValueError:
-                n = 0
+            cantidad = (cantidad or '').strip()
+            if not (cantidad.isascii() and cantidad.isdigit()):  # descarta textos, negativos y decimales
+                continue
+            # Más de 6 dígitos ya supera el máximo: no se convierte un número gigante (evitaba un error 500).
+            n = int(cantidad) if len(cantidad) <= 6 else MAX_CANTIDAD_POR_PRODUCTO + 1
             if n > 0:
+                codigo = codigo.strip()
                 items[codigo] = items.get(codigo, 0) + n
 
         try:
