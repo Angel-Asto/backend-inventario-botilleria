@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from inventario.admin import SoloLecturaAdmin, SoloLecturaInline
+
 from .models import Compra, DetalleCompra, Proveedor
 
 
@@ -9,12 +11,11 @@ class ProveedorAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'contacto')
 
 
-class DetalleCompraInline(admin.TabularInline):
+class DetalleCompraInline(SoloLecturaInline):
     model = DetalleCompra
-    extra = 0
 
 
 @admin.register(Compra)
-class CompraAdmin(admin.ModelAdmin):
+class CompraAdmin(SoloLecturaAdmin):  # las compras se registran en la app para que sumen stock
     list_display = ('pk', 'proveedor', 'fecha')
     inlines = [DetalleCompraInline]

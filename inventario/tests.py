@@ -90,3 +90,24 @@ class VistasInventarioTests(BaseInventario):
         self.client.login(username='adm', password='x12345678')
         r = self.client.get(reverse('inventario:movimientos'), {'tipo': 'salida'})
         self.assertEqual([m.tipo for m in r.context['object_list']], ['salida'])
+
+
+class AdminDjangoSoloLecturaTests(BaseInventario):
+    """En el admin de Django los historiales se ven pero no se editan (el stock no se desincroniza)."""
+
+    def setUp(self):
+        self.su = Usuario.objects.create_superuser('root', password='x12345678')
+        self.client.force_login(self.su)
+
+    def test_no_se_crean_ni_borran_movimientos_compras_ni_ventas(self):
+        for modelo in ('inventario/movimientostock', 'compras/compra', 'ventas/venta'):
+            self.assertEqual(self.client.get(f'/admin/{modelo}/add/').status_code, 403, modelo)
+            self.assertEqual(self.client.get(f'/admin/{modelo}/').status_code, 200, modelo)
+
+    def test_stock_del_producto_es_solo_lectura(self):
+        r = self.client.post(f'/admin/productos/producto/{self.p.pk}/change/', {
+            'categoria': self.p.categoria_id, 'codigo_barras': '111', 'nombre': 'Cristal',
+            'precio': 1000, 'stock': 999, 'stock_minimo': 10, 'activo': 'on'})
+        self.assertEqual(r.status_code, 302)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 5)
