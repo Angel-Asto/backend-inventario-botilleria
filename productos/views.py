@@ -58,7 +58,8 @@ class ProductoCrearView(AdminRequeridoMixin, CreateView):
             form.instance.stock = 0
             respuesta = super().form_valid(form)
             if stock_inicial:
-                registrar_movimiento(self.object, MovimientoStock.Tipo.ENTRADA, stock_inicial, 'Stock inicial')
+                registrar_movimiento(self.object, MovimientoStock.Tipo.ENTRADA, stock_inicial, 'Stock inicial',
+                                     self.request.user)
         messages.success(self.request, 'Producto registrado correctamente.')
         return respuesta
 

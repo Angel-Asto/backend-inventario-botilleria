@@ -115,7 +115,7 @@ class VentaAnularView(AdminRequeridoMixin, View):
 
     def post(self, request, pk):
         get_object_or_404(Venta, pk=pk)
-        if anular_venta(pk):
+        if anular_venta(pk, request.user):
             messages.success(request, 'Venta anulada y stock devuelto.')
         else:
             messages.error(request, 'La venta ya estaba anulada.')

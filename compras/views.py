@@ -91,7 +91,8 @@ class CompraCrearView(AdminRequeridoMixin, View):
                 formset.instance = compra
                 detalles = formset.save()
                 for d in detalles:
-                    registrar_movimiento(d.producto, MovimientoStock.Tipo.ENTRADA, d.cantidad, f'Compra {compra.pk}')
+                    registrar_movimiento(d.producto, MovimientoStock.Tipo.ENTRADA, d.cantidad, f'Compra {compra.pk}',
+                                         request.user)
             messages.success(request, 'Compra registrada y stock actualizado.')
             return redirect('compras:compra_detalle', pk=compra.pk)
         return render(request, self.template_name, {'form': form, 'formset': formset})

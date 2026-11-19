@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -11,6 +12,9 @@ class MovimientoStock(models.Model):
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
     cantidad = models.PositiveIntegerField()
     motivo = models.CharField(max_length=200)
+    # Quién hizo el cambio (auditoría). Vacío en movimientos anteriores a este campo.
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                related_name='movimientos_stock')
 
     class Meta:
         ordering = ['-fecha', '-pk']

@@ -40,7 +40,7 @@ def registrar_venta(usuario, items, medio_pago, mayor_edad=False):
             for codigo, n in items.items():
                 p = productos[codigo]
                 DetalleVenta.objects.create(venta=venta, producto=p, cantidad=n, precio_unitario=p.precio)
-                registrar_movimiento(p, MovimientoStock.Tipo.SALIDA, n, f'Venta {venta.pk}')
+                registrar_movimiento(p, MovimientoStock.Tipo.SALIDA, n, f'Venta {venta.pk}', usuario)
                 total += n * p.precio
             venta.total = total
             venta.save(update_fields=['total'])
@@ -49,14 +49,15 @@ def registrar_venta(usuario, items, medio_pago, mayor_edad=False):
     return venta
 
 
-def anular_venta(venta_id):
+def anular_venta(venta_id, usuario=None):
     """Anula la venta y devuelve el stock (HU-16). Devuelve False si ya estaba anulada."""
     with transaction.atomic():
         venta = Venta.objects.select_for_update().get(pk=venta_id)
         if venta.estado == Venta.Estado.ANULADA:
             return False
         for d in venta.detalles.select_related('producto'):
-            registrar_movimiento(d.producto, MovimientoStock.Tipo.ENTRADA, d.cantidad, f'Anulación venta {venta.pk}')
+            registrar_movimiento(d.producto, MovimientoStock.Tipo.ENTRADA, d.cantidad, f'Anulación venta {venta.pk}',
+                                 usuario)
         venta.estado = Venta.Estado.ANULADA
         venta.save(update_fields=['estado'])
     return True

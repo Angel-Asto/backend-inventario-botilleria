@@ -5,9 +5,10 @@ from productos.models import Producto
 from .models import MovimientoStock
 
 
-def registrar_movimiento(producto, tipo, cantidad, motivo):
+def registrar_movimiento(producto, tipo, cantidad, motivo, usuario=None):
     """Único punto donde cambia el stock: actualiza el producto y deja el movimiento.
 
+    usuario: quién hace el cambio; queda en el historial (auditoría).
     Debe llamarse dentro de transaction.atomic() cuando forme parte de una operación mayor.
     Lanza ValueError si el tipo no es válido, si la cantidad no es un entero positivo o si falta stock.
     """
@@ -26,4 +27,5 @@ def registrar_movimiento(producto, tipo, cantidad, motivo):
         else:
             p.stock += cantidad
         p.save(update_fields=['stock'])
-        return MovimientoStock.objects.create(producto=p, tipo=tipo, cantidad=cantidad, motivo=motivo)
+        return MovimientoStock.objects.create(producto=p, tipo=tipo, cantidad=cantidad, motivo=motivo,
+                                              usuario=usuario)

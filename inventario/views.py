@@ -33,7 +33,7 @@ class MovimientoListaView(AdminRequeridoMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        qs = MovimientoStock.objects.select_related('producto')
+        qs = MovimientoStock.objects.select_related('producto', 'usuario')
         tipo = self.request.GET.get('tipo', '')
         q = self.request.GET.get('q', '').strip()
         if tipo in MovimientoStock.Tipo.values:

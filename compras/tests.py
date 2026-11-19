@@ -48,6 +48,7 @@ class CompraTests(TestCase):
         self.assertEqual((self.p1.stock, self.p2.stock), (12, 5))
         self.assertEqual(MovimientoStock.objects.filter(tipo='entrada', motivo=f'Compra {compra.pk}').count(), 2)
         self.assertEqual(compra.total_unidades, 15)
+        self.assertTrue(all(m.usuario == self.admin for m in MovimientoStock.objects.filter(motivo=f'Compra {compra.pk}')))
 
     def test_compra_sin_productos_se_rechaza(self):
         self.client.login(username='adm', password='x12345678')

@@ -169,6 +169,13 @@ class VentaTests(TestCase):
         self.assertEqual(self.cola.stock, 3)
         self.assertTrue(MovimientoStock.objects.filter(tipo='entrada', motivo=f'Anulación venta {v.pk}').exists())
 
+    def test_movimientos_guardan_quien_vendio_y_quien_anulo(self):
+        v = self.crear_venta()
+        self.assertEqual(MovimientoStock.objects.get(motivo=f'Venta {v.pk}').usuario, self.trab)
+        self.client.login(username='adm', password='x12345678')
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Error de digitación'})
+        self.assertEqual(MovimientoStock.objects.get(motivo=f'Anulación venta {v.pk}').usuario, self.admin)
+
     def test_no_se_anula_dos_veces(self):
         v = self.crear_venta()
         self.client.login(username='adm', password='x12345678')
