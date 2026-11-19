@@ -27,6 +27,11 @@ class Venta(models.Model):
 
     class Meta:
         ordering = ['-fecha', '-pk']
+        indexes = [  # listados, reportes por período, ventas de cada vendedor y por estado
+            models.Index(fields=['fecha'], name='venta_fecha_idx'),
+            models.Index(fields=['usuario', 'fecha'], name='venta_usuario_fecha_idx'),
+            models.Index(fields=['estado', 'fecha'], name='venta_estado_fecha_idx'),
+        ]
 
     def __str__(self):
         return f'Venta {self.pk}'

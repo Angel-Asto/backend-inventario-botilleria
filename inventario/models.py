@@ -18,6 +18,10 @@ class MovimientoStock(models.Model):
 
     class Meta:
         ordering = ['-fecha', '-pk']
+        indexes = [  # historial ordenado por fecha y kardex de cada producto
+            models.Index(fields=['-fecha'], name='movimiento_fecha_idx'),
+            models.Index(fields=['producto', '-fecha'], name='movimiento_producto_fecha_idx'),
+        ]
         constraints = [
             models.CheckConstraint(condition=models.Q(cantidad__gte=1), name='movimiento_cantidad_positiva'),
         ]
