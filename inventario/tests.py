@@ -37,6 +37,29 @@ class ServicioStockTests(BaseInventario):
         self.assertEqual(self.p.stock, 5)
         self.assertEqual(MovimientoStock.objects.count(), 0)
 
+    def test_salida_de_todo_el_stock_justo_se_permite(self):
+        registrar_movimiento(self.p, MovimientoStock.Tipo.SALIDA, 5, 'Venta 1')
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 0)
+
+    def test_tipo_invalido_se_rechaza_y_no_suma_stock(self):
+        for tipo in ('SALIDA', 'Salida', 'ajuste', ''):
+            with self.assertRaises(ValueError):
+                registrar_movimiento(self.p, tipo, 3, 'x')
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 5)
+        self.assertEqual(MovimientoStock.objects.count(), 0)
+
+    def test_cantidad_cero_negativa_o_no_entera_se_rechaza(self):
+        for cantidad in (0, -2, 1.5, '3', True):
+            with self.assertRaises(ValueError):
+                registrar_movimiento(self.p, MovimientoStock.Tipo.ENTRADA, cantidad, 'x')
+        self.assertEqual(MovimientoStock.objects.count(), 0)
+
+    def test_motivo_vacio_se_rechaza(self):
+        with self.assertRaises(ValueError):
+            registrar_movimiento(self.p, MovimientoStock.Tipo.ENTRADA, 1, '  ')
+
 
 class VistasInventarioTests(BaseInventario):
     def test_stock_requiere_login(self):
