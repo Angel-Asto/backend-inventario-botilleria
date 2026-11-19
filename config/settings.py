@@ -101,8 +101,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 # DATABASE_URL permite pasar a PostgreSQL sin tocar código (ej. postgres://usuario:clave@host:5432/botilleria).
+# Vacío o ausente = SQLite local (el .env.example trae la línea vacía).
 DATABASES = {
-    'default': dj_database_url.config(default=f'sqlite:///{BASE_DIR / "db.sqlite3"}', conn_max_age=600),
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL') or f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+                                     conn_max_age=600),
 }
 if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
     # SQLite no bloquea filas: IMMEDIATE toma el bloqueo de escritura al iniciar la transacción,

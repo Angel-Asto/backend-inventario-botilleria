@@ -265,3 +265,21 @@ class RespaldoTests(TestCase):
         self.assertEqual(Producto.objects.get(codigo_barras='1').stock, 3)
         self.assertEqual(Venta.objects.get().usuario.username, 'trab')
         self.assertTrue(Usuario.objects.get().check_password(CLAVE))
+
+
+class ConfiguracionTests(TestCase):
+    """La configuración del .env.example funciona tal cual en un clon limpio."""
+
+    def test_database_url_vacia_usa_sqlite(self):
+        import os
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        from django.conf import settings
+        entorno = dict(os.environ, DATABASE_URL='', SECRET_KEY='clave-de-prueba-' + 'x' * 40, DEBUG='True')
+        codigo = ("import django, os; os.environ['DJANGO_SETTINGS_MODULE']='config.settings'; django.setup(); "
+                  "from django.conf import settings as s; print(s.DATABASES['default']['ENGINE'])")
+        r = subprocess.run([sys.executable, '-c', codigo], cwd=Path(settings.BASE_DIR), env=entorno,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.stdout.strip(), 'django.db.backends.sqlite3', r.stderr[-500:])
