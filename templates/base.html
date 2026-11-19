@@ -54,7 +54,7 @@
       <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
     </div>
     {% endif %}
-    {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% else %}success{% endif %}">{{ m }}</div>{% endfor %}
+    {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% elif m.tags == 'warning' %}warning{% elif m.tags == 'info' %}info{% else %}success{% endif %}" role="{% if m.tags == 'error' %}alert{% else %}status{% endif %}">{{ m }}</div>{% endfor %}
     {% block contenido %}{% endblock %}
   </main>
 </body>
