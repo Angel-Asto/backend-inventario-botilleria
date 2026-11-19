@@ -1,5 +1,73 @@
 {% extends 'base.html' %}
+{% load formato %}
 {% block titulo %}Panel | Botillería{% endblock %}
 {% block contenido %}
-<div class="hello"><h1>Resumen del día</h1><p>Bienvenido, {{ user.get_full_name|default:user.username }}.</p></div>
+<div class="hello mb-3">
+  <h1>Resumen del día</h1>
+  <p>Bienvenido, {{ user.get_full_name|default:user.username }}.{% if not user.es_admin %} Estos son tus números de hoy.{% endif %}</p>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="kpi">
+    <span class="ic"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
+    <div><span class="v">{{ ventas_hoy_total|pesos }}</span><span class="l">Vendido hoy</span></div>
+  </div></div>
+  <div class="col-6 col-lg-3"><div class="kpi">
+    <span class="ic"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+    <div><span class="v">{{ ventas_hoy_cantidad }}</span><span class="l">Ventas hoy</span></div>
+  </div></div>
+  <div class="col-6 col-lg-3"><div class="kpi">
+    <span class="ic"><i class="bi bi-calculator" aria-hidden="true"></i></span>
+    <div><span class="v">{{ ticket_promedio|pesos }}</span><span class="l">Ticket promedio</span></div>
+  </div></div>
+  <div class="col-6 col-lg-3"><a class="kpi text-decoration-none text-reset" href="{% url 'inventario:stock' %}?solo_bajo=1">
+    <span class="ic"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>
+    <div><span class="v {% if stock_bajo_cantidad %}text-danger{% endif %}">{{ stock_bajo_cantidad }}</span><span class="l">Con stock bajo</span></div>
+  </a></div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-acc" href="{% url 'ventas:caja' %}"><i class="bi bi-upc-scan" aria-hidden="true"></i> Nueva venta</a>
+  {% if user.es_admin %}
+  <a class="btn btn-outline-secondary" href="{% url 'compras:compra_crear' %}"><i class="bi bi-cart-plus" aria-hidden="true"></i> Registrar compra</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card card-body">
+      <h2 class="h5">Últimas ventas</h2>
+      <div class="table-responsive border-0"><table class="table align-middle">
+        <thead><tr><th>N°</th><th>Hora</th>{% if user.es_admin %}<th>Vendedor</th>{% endif %}<th>Total</th><th>Estado</th></tr></thead>
+        <tbody>
+        {% for v in ultimas_ventas %}
+          <tr>
+            <td><a href="{% url 'ventas:detalle' v.pk %}">{{ v.pk }}</a></td>
+            <td>{{ v.creada_en|date:"d/m H:i" }}</td>
+            {% if user.es_admin %}<td>{{ v.usuario.username }}</td>{% endif %}
+            <td>{{ v.total|pesos }}</td>
+            <td><span class="badge {% if v.estado == 'anulada' %}bg-secondary{% else %}text-bg-success{% endif %}">{{ v.get_estado_display }}</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-3">Aún no hay ventas.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card card-body">
+      <h2 class="h5">Reponer pronto</h2>
+      <ul class="list-unstyled m-0">
+      {% for p in stock_bajo %}
+        <li class="d-flex justify-content-between border-bottom py-2"><span>{{ p.nombre }}</span>
+          <span class="badge text-bg-danger">{{ p.stock }} / mín. {{ p.stock_minimo }}</span></li>
+      {% empty %}
+        <li class="text-muted py-2">Todo el stock está sobre el mínimo.</li>
+      {% endfor %}
+      </ul>
+      {% if stock_bajo_cantidad > 5 %}<a class="small mt-2" href="{% url 'inventario:stock' %}?solo_bajo=1">Ver los {{ stock_bajo_cantidad }} productos</a>{% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -151,3 +151,34 @@ class GestionUsuariosTests(TestCase):
     def test_superusuario_cuenta_como_admin(self):
         su = Usuario.objects.create_superuser('root', password=CLAVE)
         self.assertTrue(su.es_admin)
+
+
+class PanelTests(TestCase):
+    """El panel muestra los indicadores del día según el rol."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from productos.models import Categoria, Producto
+        from ventas.models import Venta
+        cls.admin = Usuario.objects.create_user('adm', password=CLAVE, rol='admin')
+        cls.trab = Usuario.objects.create_user('trab', password=CLAVE, rol='trabajador')
+        cls.otro = Usuario.objects.create_user('otro', password=CLAVE, rol='trabajador')
+        cat = Categoria.objects.create(nombre='Bebidas')
+        Producto.objects.create(categoria=cat, codigo_barras='1', nombre='Agua', precio=900, stock=1, stock_minimo=5)
+        Venta.objects.create(usuario=cls.trab, medio_pago='efectivo', total=3000)
+        Venta.objects.create(usuario=cls.otro, medio_pago='tarjeta', total=1000)
+        Venta.objects.create(usuario=cls.trab, medio_pago='efectivo', total=500, estado='anulada')
+
+    def test_admin_ve_totales_del_local_sin_anuladas(self):
+        self.client.login(username='adm', password=CLAVE)
+        r = self.client.get(reverse('usuarios:inicio'))
+        self.assertEqual((r.context['ventas_hoy_total'], r.context['ventas_hoy_cantidad']), (4000, 2))
+        self.assertEqual(r.context['ticket_promedio'], 2000)
+        self.assertEqual(r.context['stock_bajo_cantidad'], 1)
+        self.assertContains(r, '$4.000')
+
+    def test_trabajador_solo_ve_sus_numeros(self):
+        self.client.login(username='trab', password=CLAVE)
+        r = self.client.get(reverse('usuarios:inicio'))
+        self.assertEqual((r.context['ventas_hoy_total'], r.context['ventas_hoy_cantidad']), (3000, 1))
+        self.assertTrue(all(v.usuario == self.trab for v in r.context['ultimas_ventas']))
