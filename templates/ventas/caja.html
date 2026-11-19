@@ -24,6 +24,7 @@
   <div class="col-lg-5">
     <form method="post" id="form-venta" class="card card-body">
       {% csrf_token %}
+      <input type="hidden" name="token" value="{{ token }}">
       <h2 class="h5">Carrito</h2>
       <table class="table align-middle" id="tabla">
         <thead><tr><th>Producto</th><th style="width:90px">Cant.</th><th class="text-end">Subtotal</th><th></th></tr></thead>
@@ -87,6 +88,12 @@
     document.getElementById('bloque-edad').classList.toggle('d-none', !alcohol);
     document.getElementById('pagar').disabled = !hay;
   }
+
+  // Evita el doble envío: al primer clic en Pagar el botón queda deshabilitado.
+  document.getElementById('form-venta').addEventListener('submit', function () {
+    var pagar = document.getElementById('pagar');
+    pagar.disabled = true; pagar.textContent = 'Procesando…';
+  });
 
   // Lector externo (USB/Bluetooth) o teclado: escribe el código y envía Enter.
   escaner.addEventListener('keydown', function (e) {

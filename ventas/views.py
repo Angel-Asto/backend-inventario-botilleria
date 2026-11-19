@@ -1,5 +1,8 @@
+import secrets
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
@@ -30,14 +33,35 @@ class BuscarProductoView(LoginRequiredMixin, View):
         return JsonResponse(_datos_producto(p))
 
 
+def _nuevo_token(request):
+    """Token de un solo uso para el formulario de la caja (evita registrar dos veces la misma venta)."""
+    token = secrets.token_urlsafe(16)
+    request.session['caja_tokens'] = (request.session.get('caja_tokens', []) + [token])[-10:]
+    return token
+
+
+def _usar_token(request, token):
+    """True solo la primera vez que llega un token emitido para esta sesión."""
+    if not token or token not in request.session.get('caja_tokens', []):
+        return False
+    request.session['caja_tokens'] = [t for t in request.session['caja_tokens'] if t != token]
+    return cache.add(f'caja:token:{token}', 1, 60 * 60)  # atómico: frena dos envíos simultáneos
+
+
 class CajaView(LoginRequiredMixin, View):
     """HU-13 a HU-15 y HU-17: escanear, totalizar, confirmar edad y cobrar."""
     template_name = 'ventas/caja.html'
 
+    def render_caja(self, request, carrito):
+        return render(request, self.template_name, {'carrito': carrito, 'token': _nuevo_token(request)})
+
     def get(self, request):
-        return render(request, self.template_name, {'carrito': []})
+        return self.render_caja(request, [])
 
     def post(self, request):
+        if not _usar_token(request, request.POST.get('token')):
+            messages.error(request, 'Esta venta ya se había enviado. Revisa el historial antes de cobrar de nuevo.')
+            return redirect('ventas:lista')
         items = {}
         for codigo, cantidad in zip(request.POST.getlist('codigo'), request.POST.getlist('cantidad')):
             cantidad = (cantidad or '').strip()
@@ -57,7 +81,7 @@ class CajaView(LoginRequiredMixin, View):
                          Producto.objects.select_related('categoria').filter(codigo_barras__in=items, activo=True)}
             carrito = [dict(_datos_producto(productos[c]), cantidad=n) for c, n in items.items() if c in productos]
             messages.error(request, str(e))
-            return render(request, self.template_name, {'carrito': carrito})
+            return self.render_caja(request, carrito)
         messages.success(request, 'Venta registrada.')
         return redirect('ventas:detalle', pk=venta.pk)
 
