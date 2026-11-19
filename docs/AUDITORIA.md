@@ -227,7 +227,7 @@ En el código solo se identifican HU-10 a HU-18, HU-20 y HU-21; las demás (HU-0
 
 ## 8. Estado de las correcciones (Fase 2)
 
-Aplicadas el 19-11-2026 en `feature/aastorga` (sin ramas nuevas), un commit por corrección y los tests ejecutados después de cada una. Resultado final: **98 tests OK**, `makemigrations --check` limpio y `check --deploy` con `DEBUG=False` sin problemas.
+Aplicadas el 19-11-2026 en `feature/aastorga` (sin ramas nuevas), un commit por corrección y los tests ejecutados después de cada una. Resultado final: **99 tests OK**, `makemigrations --check` limpio y `check --deploy` con `DEBUG=False` sin problemas.
 
 | Hallazgo | Estado | Commit |
 |---|---|---|
@@ -237,7 +237,7 @@ Aplicadas el 19-11-2026 en `feature/aastorga` (sin ramas nuevas), un commit por 
 | A2 Admin de Django salta el stock | ✅ Solo lectura para movimientos, compras y ventas; stock de solo lectura | `aaa0b79` |
 | A3 Sin límite de login | ✅ 5 intentos por usuario / 20 por IP, bloqueo de 15 min, registrado | `8839f35` |
 | A4 Error 500 en la caja | ✅ Tope de 999 por producto y conversión segura | `f3998c5` |
-| A5 Sin tests de usuarios | ✅ 24 tests en `usuarios` | `5d1e5c5` y siguientes |
+| A5 Sin tests de usuarios | ✅ 25 tests en `usuarios` | `5d1e5c5` y siguientes |
 | A6 Cookies y sesión | ✅ Sesión de 8 h; cookies seguras, HSTS y SSL con `DEBUG=False` | `386cccb` |
 | M1 Stock inicial sin movimiento | ✅ | `84b364c` |
 | M2 Auditoría por usuario | ✅ Usuario en movimientos y compras; quién, cuándo y por qué en anulaciones | `ae58dfa`, `2826dc4`, `3bcecd9` |
@@ -260,6 +260,7 @@ Aplicadas el 19-11-2026 en `feature/aastorga` (sin ramas nuevas), un commit por 
 | B9 Gestión de usuarios | ⏸ Pendiente | — |
 | B10 Datos del proveedor | ⏸ Pendiente | — |
 | B11 Depurador de runserver_plus | ✅ Documentado en el README | `8e4a906` |
+| Clon limpio (prueba final) | ✅ Se encontró y corrigió que `DATABASE_URL=` vacío (como en `.env.example`) rompía el arranque | `10ebb16` |
 
 Otras mejoras de la lista: refactor de la venta a un servicio (`89b03f6`), la caja conserva el carrito si se rechaza la venta (`cdfc551`, error encontrado durante la Fase 2), formato `$1.990` (`f8877aa`) y ajuste manual de inventario (`67b5f2d`).
 

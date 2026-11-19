@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white" alt="Bootstrap 5.3">
   <img src="https://img.shields.io/badge/SQLite-desarrollo-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/PostgreSQL-producci%C3%B3n-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/Pruebas-98%20OK-15803D?style=for-the-badge" alt="98 pruebas">
+  <img src="https://img.shields.io/badge/Pruebas-99%20OK-15803D?style=for-the-badge" alt="99 pruebas">
 </p>
 
 <p align="center">
@@ -250,7 +250,7 @@ Con SQLite también basta copiar `db.sqlite3` con el servidor detenido; con Post
 python manage.py test
 ```
 
-98 pruebas automáticas: usuarios y seguridad del login (24), productos (15), inventario (17), compras (10), ventas (27) y reportes (5). Cubren permisos por rol, cálculo de totales, stock justo e insuficiente, transacciones que no quedan a medias, doble envío, datos inválidos, reglas en la base de datos, idempotencia de `seed_demo` y respaldo/restauración.
+99 pruebas automáticas: usuarios, seguridad del login y configuración (25), productos (15), inventario (17), compras (10), ventas (27) y reportes (5). Cubren permisos por rol, cálculo de totales, stock justo e insuficiente, transacciones que no quedan a medias, doble envío, datos inválidos, reglas en la base de datos, idempotencia de `seed_demo` y respaldo/restauración.
 
 ## Flujo de trabajo en Git
 
