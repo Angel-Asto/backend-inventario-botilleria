@@ -51,6 +51,7 @@
   </div>
 </div>
 
+{{ carrito|json_script:"carrito-inicial" }}
 <script>
 (function () {
   var carrito = {};
@@ -88,6 +89,14 @@
     document.getElementById('bloque-edad').classList.toggle('d-none', !alcohol);
     document.getElementById('pagar').disabled = !hay;
   }
+
+  // Si el servidor rechazó la venta (falta confirmar edad, medio de pago, stock…), se recupera el carrito.
+  JSON.parse(document.getElementById('carrito-inicial').textContent).forEach(function (p) {
+    if (p.stock < 1) return;
+    carrito[p.codigo] = { nombre: p.nombre, precio: p.precio, stock: p.stock, alcohol: p.alcohol,
+                          cantidad: Math.max(1, Math.min(p.cantidad, p.stock)) };
+  });
+  pintar();
 
   // Evita el doble envío: al primer clic en Pagar el botón queda deshabilitado.
   document.getElementById('form-venta').addEventListener('submit', function () {

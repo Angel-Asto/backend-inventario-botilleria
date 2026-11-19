@@ -84,6 +84,12 @@ class VentaTests(TestCase):
         self.cerveza.refresh_from_db()
         self.assertEqual(self.cerveza.stock, 10)
 
+    def test_venta_rechazada_conserva_el_carrito(self):
+        self.client.login(username='trab', password='x12345678')
+        r = self.vender(['111', '222'], ['2', '1'])  # falta confirmar mayoría de edad
+        self.assertEqual({p['codigo']: p['cantidad'] for p in r.context['carrito']}, {'111': 2, '222': 1})
+        self.assertContains(r, 'id="carrito-inicial"')
+
     def test_sin_alcohol_no_pide_confirmacion(self):
         self.client.login(username='trab', password='x12345678')
         self.vender(['222'], ['1'])
