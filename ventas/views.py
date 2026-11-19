@@ -104,7 +104,7 @@ class VentaDetalleView(LoginRequiredMixin, DetailView):
     template_name = 'ventas/venta_detalle.html'
 
     def get_queryset(self):
-        qs = Venta.objects.select_related('usuario').prefetch_related('detalles__producto')
+        qs = Venta.objects.select_related('usuario', 'anulada_por').prefetch_related('detalles__producto')
         if not self.request.user.es_admin:
             qs = qs.filter(usuario=self.request.user)
         return qs
@@ -115,7 +115,12 @@ class VentaAnularView(AdminRequeridoMixin, View):
 
     def post(self, request, pk):
         get_object_or_404(Venta, pk=pk)
-        if anular_venta(pk, request.user):
+        try:
+            anulada = anular_venta(pk, request.user, request.POST.get('motivo'))
+        except VentaInvalida as e:
+            messages.error(request, str(e))
+            return redirect('ventas:detalle', pk=pk)
+        if anulada:
             messages.success(request, 'Venta anulada y stock devuelto.')
         else:
             messages.error(request, 'La venta ya estaba anulada.')

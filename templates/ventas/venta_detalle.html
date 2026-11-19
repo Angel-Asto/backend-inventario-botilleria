@@ -10,6 +10,9 @@
   <p class="mb-1"><strong>Vendedor:</strong> {{ object.usuario.username }}</p>
   <p class="mb-1"><strong>Pago:</strong> {{ object.get_medio_pago_display }}</p>
   <p><strong>Estado:</strong> <span class="badge {% if object.estado == 'anulada' %}bg-secondary{% else %}bg-success{% endif %}">{{ object.get_estado_display }}</span></p>
+  {% if object.estado == 'anulada' and object.anulada_en %}
+  <div class="alert alert-warning">Anulada el {{ object.anulada_en|date:"d/m/Y H:i" }} por <b>{{ object.anulada_por.username }}</b>. Motivo: {{ object.motivo_anulacion }}</div>
+  {% endif %}
   <table class="table">
     <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th class="text-end">Subtotal</th></tr></thead>
     <tbody>
@@ -23,8 +26,12 @@
     <a class="btn btn-outline-secondary" href="{% url 'ventas:lista' %}">Volver</a>
     <button class="btn btn-outline-dark" onclick="window.print()">Imprimir</button>
     {% if user.es_admin and object.estado == 'completada' %}
-    <form method="post" action="{% url 'ventas:anular' object.pk %}" onsubmit="return confirm('¿Anular esta venta? El stock volverá al inventario.');">
-      {% csrf_token %}<button class="btn btn-danger">Anular venta</button>
+    <form method="post" action="{% url 'ventas:anular' object.pk %}" class="d-flex gap-2"
+          onsubmit="return confirm('¿Anular esta venta? El stock volverá al inventario.');">
+      {% csrf_token %}
+      <label class="visually-hidden" for="motivo">Motivo de la anulación</label>
+      <input class="form-control" id="motivo" name="motivo" maxlength="200" required placeholder="Motivo de la anulación">
+      <button class="btn btn-danger text-nowrap">Anular venta</button>
     </form>
     {% endif %}
   </div>

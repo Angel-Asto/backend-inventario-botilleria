@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 
 from inventario.models import MovimientoStock
 from inventario.servicios import registrar_movimiento
@@ -49,8 +50,14 @@ def registrar_venta(usuario, items, medio_pago, mayor_edad=False):
     return venta
 
 
-def anular_venta(venta_id, usuario=None):
-    """Anula la venta y devuelve el stock (HU-16). Devuelve False si ya estaba anulada."""
+def anular_venta(venta_id, usuario, motivo):
+    """Anula la venta y devuelve el stock (HU-16). Devuelve False si ya estaba anulada.
+
+    Deja registro de quién la anuló, cuándo y por qué.
+    """
+    motivo = (motivo or '').strip()[:200]
+    if not motivo:
+        raise VentaInvalida('Indica el motivo de la anulación.')
     with transaction.atomic():
         venta = Venta.objects.select_for_update().get(pk=venta_id)
         if venta.estado == Venta.Estado.ANULADA:
@@ -59,5 +66,6 @@ def anular_venta(venta_id, usuario=None):
             registrar_movimiento(d.producto, MovimientoStock.Tipo.ENTRADA, d.cantidad, f'Anulación venta {venta.pk}',
                                  usuario)
         venta.estado = Venta.Estado.ANULADA
-        venta.save(update_fields=['estado'])
+        venta.anulada_por, venta.anulada_en, venta.motivo_anulacion = usuario, timezone.now(), motivo
+        venta.save(update_fields=['estado', 'anulada_por', 'anulada_en', 'motivo_anulacion'])
     return True

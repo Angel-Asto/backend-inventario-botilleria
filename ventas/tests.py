@@ -163,7 +163,7 @@ class VentaTests(TestCase):
     def test_admin_anula_y_devuelve_stock(self):
         v = self.crear_venta()
         self.client.login(username='adm', password='x12345678')
-        self.client.post(reverse('ventas:anular', args=[v.pk]))
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'})
         v.refresh_from_db(); self.cola.refresh_from_db()
         self.assertEqual(v.estado, 'anulada')
         self.assertEqual(self.cola.stock, 3)
@@ -176,18 +176,30 @@ class VentaTests(TestCase):
         self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Error de digitación'})
         self.assertEqual(MovimientoStock.objects.get(motivo=f'Anulación venta {v.pk}').usuario, self.admin)
 
+    def test_anulacion_exige_motivo_y_guarda_quien_y_cuando(self):
+        v = self.crear_venta()
+        self.client.login(username='adm', password='x12345678')
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': '   '})
+        v.refresh_from_db()
+        self.assertEqual(v.estado, 'completada')
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Cliente devolvió el producto'})
+        v.refresh_from_db()
+        self.assertEqual((v.estado, v.anulada_por, v.motivo_anulacion), ('anulada', self.admin, 'Cliente devolvió el producto'))
+        self.assertIsNotNone(v.anulada_en)
+        self.assertContains(self.client.get(reverse('ventas:detalle', args=[v.pk])), 'Cliente devolvió el producto')
+
     def test_no_se_anula_dos_veces(self):
         v = self.crear_venta()
         self.client.login(username='adm', password='x12345678')
-        self.client.post(reverse('ventas:anular', args=[v.pk]))
-        self.client.post(reverse('ventas:anular', args=[v.pk]))
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'})
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'})
         self.cola.refresh_from_db()
         self.assertEqual(self.cola.stock, 3)
 
     def test_trabajador_no_puede_anular(self):
         v = self.crear_venta()
         self.client.login(username='trab', password='x12345678')
-        self.assertEqual(self.client.post(reverse('ventas:anular', args=[v.pk])).status_code, 403)
+        self.assertEqual(self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'}).status_code, 403)
         v.refresh_from_db()
         self.assertEqual(v.estado, 'completada')
 

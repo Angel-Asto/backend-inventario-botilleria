@@ -18,6 +18,11 @@ class Venta(models.Model):
     medio_pago = models.CharField(max_length=20, choices=MedioPago.choices)
     total = models.PositiveIntegerField(default=0)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.COMPLETADA)
+    # Auditoría de la anulación: quién, cuándo y por qué.
+    anulada_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name='ventas_anuladas', editable=False)
+    anulada_en = models.DateTimeField(null=True, blank=True, editable=False)
+    motivo_anulacion = models.CharField(max_length=200, blank=True, editable=False)
 
     class Meta:
         ordering = ['-fecha', '-pk']
