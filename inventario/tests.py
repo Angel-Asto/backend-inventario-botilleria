@@ -111,3 +111,27 @@ class AdminDjangoSoloLecturaTests(BaseInventario):
         self.assertEqual(r.status_code, 302)
         self.p.refresh_from_db()
         self.assertEqual(self.p.stock, 5)
+
+
+class AjusteStockTests(BaseInventario):
+    url = '/inventario/ajuste/'
+
+    def test_solo_admin(self):
+        self.client.login(username='trab', password='x12345678')
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_merma_resta_stock_y_queda_en_el_historial(self):
+        self.client.login(username='adm', password='x12345678')
+        r = self.client.post(self.url, {'producto': self.p.pk, 'tipo': 'salida', 'cantidad': 2, 'motivo': 'Botella rota'})
+        self.assertRedirects(r, reverse('inventario:movimientos'))
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 3)
+        m = MovimientoStock.objects.get()
+        self.assertEqual((m.motivo, m.usuario), ('Ajuste: Botella rota', self.admin))
+
+    def test_no_deja_stock_negativo_ni_acepta_motivo_corto(self):
+        self.client.login(username='adm', password='x12345678')
+        r = self.client.post(self.url, {'producto': self.p.pk, 'tipo': 'salida', 'cantidad': 6, 'motivo': 'Conteo físico'})
+        self.assertContains(r, 'Stock insuficiente')
+        self.client.post(self.url, {'producto': self.p.pk, 'tipo': 'entrada', 'cantidad': 1, 'motivo': 'x'})
+        self.assertEqual(MovimientoStock.objects.count(), 0)
