@@ -30,6 +30,7 @@
   <a class="btn btn-acc" href="{% url 'ventas:caja' %}"><i class="bi bi-upc-scan" aria-hidden="true"></i> Nueva venta</a>
   {% if user.es_admin %}
   <a class="btn btn-outline-secondary" href="{% url 'compras:compra_crear' %}"><i class="bi bi-cart-plus" aria-hidden="true"></i> Registrar compra</a>
+  <a class="btn btn-outline-secondary" href="{% url 'reportes:ventas' %}"><i class="bi bi-bar-chart" aria-hidden="true"></i> Reportes</a>
   {% endif %}
 </div>
 

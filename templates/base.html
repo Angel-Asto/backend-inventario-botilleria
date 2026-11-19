@@ -33,6 +33,7 @@
 
     {% if user.es_admin %}
     <div class="grp">Administración</div>
+    <a class="m" href="{% url 'reportes:ventas' %}"><i class="bi bi-bar-chart"></i><span>Reportes</span></a>
     <a class="m" href="{% url 'compras:compra_lista' %}"><i class="bi bi-cart-plus"></i><span>Compras</span></a>
     <a class="m" href="{% url 'compras:proveedor_lista' %}"><i class="bi bi-truck"></i><span>Proveedores</span></a>
     <a class="m" href="{% url 'usuarios:lista' %}"><i class="bi bi-people"></i><span>Usuarios</span></a>
