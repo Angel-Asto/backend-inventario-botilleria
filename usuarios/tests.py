@@ -240,3 +240,28 @@ class SeedDemoTests(TestCase):
         with override_settings(DEBUG=False), self.assertRaises(CommandError):
             call_command('seed_demo')
         self.assertFalse(Usuario.objects.filter(username='admin_demo').exists())
+
+
+class RespaldoTests(TestCase):
+    def test_respaldar_y_restaurar(self):
+        import io
+        import tempfile
+        from pathlib import Path
+
+        from django.core.management import call_command
+
+        from productos.models import Categoria, Producto
+        from ventas.models import Venta
+        Usuario.objects.create_user('trab', password=CLAVE)
+        cat = Categoria.objects.create(nombre='Bebidas')
+        p = Producto.objects.create(categoria=cat, codigo_barras='1', nombre='Cola', precio=1000, stock=3)
+        Venta.objects.create(usuario=Usuario.objects.get(), medio_pago='efectivo', total=1000)
+        with tempfile.TemporaryDirectory() as carpeta:
+            call_command('respaldar', carpeta=carpeta, stdout=io.StringIO())
+            archivo = next(Path(carpeta).glob('respaldo_*.json'))
+            Venta.objects.all().delete(); Producto.objects.all().delete(); Categoria.objects.all().delete()
+            Usuario.objects.all().delete()
+            call_command('loaddata', str(archivo), verbosity=0)
+        self.assertEqual(Producto.objects.get(codigo_barras='1').stock, 3)
+        self.assertEqual(Venta.objects.get().usuario.username, 'trab')
+        self.assertTrue(Usuario.objects.get().check_password(CLAVE))
