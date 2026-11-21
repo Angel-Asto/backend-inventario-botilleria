@@ -37,6 +37,29 @@ class ServicioStockTests(BaseInventario):
         self.assertEqual(self.p.stock, 5)
         self.assertEqual(MovimientoStock.objects.count(), 0)
 
+    def test_salida_de_todo_el_stock_justo_se_permite(self):
+        registrar_movimiento(self.p, MovimientoStock.Tipo.SALIDA, 5, 'Venta 1')
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 0)
+
+    def test_tipo_invalido_se_rechaza_y_no_suma_stock(self):
+        for tipo in ('SALIDA', 'Salida', 'ajuste', ''):
+            with self.assertRaises(ValueError):
+                registrar_movimiento(self.p, tipo, 3, 'x')
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 5)
+        self.assertEqual(MovimientoStock.objects.count(), 0)
+
+    def test_cantidad_cero_negativa_o_no_entera_se_rechaza(self):
+        for cantidad in (0, -2, 1.5, '3', True):
+            with self.assertRaises(ValueError):
+                registrar_movimiento(self.p, MovimientoStock.Tipo.ENTRADA, cantidad, 'x')
+        self.assertEqual(MovimientoStock.objects.count(), 0)
+
+    def test_motivo_vacio_se_rechaza(self):
+        with self.assertRaises(ValueError):
+            registrar_movimiento(self.p, MovimientoStock.Tipo.ENTRADA, 1, '  ')
+
 
 class VistasInventarioTests(BaseInventario):
     def test_stock_requiere_login(self):
@@ -67,3 +90,48 @@ class VistasInventarioTests(BaseInventario):
         self.client.login(username='adm', password='x12345678')
         r = self.client.get(reverse('inventario:movimientos'), {'tipo': 'salida'})
         self.assertEqual([m.tipo for m in r.context['object_list']], ['salida'])
+
+
+class AdminDjangoSoloLecturaTests(BaseInventario):
+    """En el admin de Django los historiales se ven pero no se editan (el stock no se desincroniza)."""
+
+    def setUp(self):
+        self.su = Usuario.objects.create_superuser('root', password='x12345678')
+        self.client.force_login(self.su)
+
+    def test_no_se_crean_ni_borran_movimientos_compras_ni_ventas(self):
+        for modelo in ('inventario/movimientostock', 'compras/compra', 'ventas/venta'):
+            self.assertEqual(self.client.get(f'/admin/{modelo}/add/').status_code, 403, modelo)
+            self.assertEqual(self.client.get(f'/admin/{modelo}/').status_code, 200, modelo)
+
+    def test_stock_del_producto_es_solo_lectura(self):
+        r = self.client.post(f'/admin/productos/producto/{self.p.pk}/change/', {
+            'categoria': self.p.categoria_id, 'codigo_barras': '111', 'nombre': 'Cristal',
+            'precio': 1000, 'stock': 999, 'stock_minimo': 10, 'activo': 'on'})
+        self.assertEqual(r.status_code, 302)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 5)
+
+
+class AjusteStockTests(BaseInventario):
+    url = '/inventario/ajuste/'
+
+    def test_solo_admin(self):
+        self.client.login(username='trab', password='x12345678')
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_merma_resta_stock_y_queda_en_el_historial(self):
+        self.client.login(username='adm', password='x12345678')
+        r = self.client.post(self.url, {'producto': self.p.pk, 'tipo': 'salida', 'cantidad': 2, 'motivo': 'Botella rota'})
+        self.assertRedirects(r, reverse('inventario:movimientos'))
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, 3)
+        m = MovimientoStock.objects.get()
+        self.assertEqual((m.motivo, m.usuario), ('Ajuste: Botella rota', self.admin))
+
+    def test_no_deja_stock_negativo_ni_acepta_motivo_corto(self):
+        self.client.login(username='adm', password='x12345678')
+        r = self.client.post(self.url, {'producto': self.p.pk, 'tipo': 'salida', 'cantidad': 6, 'motivo': 'Conteo físico'})
+        self.assertContains(r, 'Stock insuficiente')
+        self.client.post(self.url, {'producto': self.p.pk, 'tipo': 'entrada', 'cantidad': 1, 'motivo': 'x'})
+        self.assertEqual(MovimientoStock.objects.count(), 0)

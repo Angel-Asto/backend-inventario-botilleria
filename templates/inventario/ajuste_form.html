@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block titulo %}Ajuste de stock | Botillería{% endblock %}
+{% block contenido %}
+<h1 class="h3 mb-3">Ajuste manual de stock</h1>
+<div class="col-md-7"><div class="card"><div class="card-body">
+  <p class="text-muted small">Úsalo para mermas, roturas, productos vencidos o diferencias del conteo físico.
+    Las compras y ventas ajustan el stock solas. El ajuste queda en el historial con tu usuario.</p>
+  {% for e in form.non_field_errors %}<div class="alert alert-warning" role="alert">{{ e }}</div>{% endfor %}
+  <form method="post">{% csrf_token %}
+    {% include 'includes/campos.html' %}
+    <button class="btn btn-acc" type="submit">Registrar ajuste</button>
+    <a class="btn btn-outline-secondary" href="{% url 'inventario:movimientos' %}">Cancelar</a>
+  </form>
+</div></div></div>
+{% endblock %}

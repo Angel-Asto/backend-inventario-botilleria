@@ -1,11 +1,15 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F, Q
-from django.views.generic import ListView
+from django.urls import reverse_lazy
+from django.views.generic import FormView, ListView
 
 from productos.models import Producto
 from usuarios.views import AdminRequeridoMixin
 
+from .forms import AjusteStockForm
 from .models import MovimientoStock
+from .servicios import registrar_movimiento
 
 
 class StockActualView(LoginRequiredMixin, ListView):
@@ -33,7 +37,7 @@ class MovimientoListaView(AdminRequeridoMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        qs = MovimientoStock.objects.select_related('producto')
+        qs = MovimientoStock.objects.select_related('producto', 'usuario')
         tipo = self.request.GET.get('tipo', '')
         q = self.request.GET.get('q', '').strip()
         if tipo in MovimientoStock.Tipo.values:
@@ -49,3 +53,20 @@ class MovimientoListaView(AdminRequeridoMixin, ListView):
         ctx['qs'] = params.urlencode()
         ctx['tipos'] = MovimientoStock.Tipo.choices
         return ctx
+
+
+class AjusteStockView(AdminRequeridoMixin, FormView):
+    """Ajuste manual de inventario (mermas, roturas, conteo). Pasa por registrar_movimiento."""
+    form_class = AjusteStockForm
+    template_name = 'inventario/ajuste_form.html'
+    success_url = reverse_lazy('inventario:movimientos')
+
+    def form_valid(self, form):
+        d = form.cleaned_data
+        try:
+            registrar_movimiento(d['producto'], d['tipo'], d['cantidad'], f"Ajuste: {d['motivo']}", self.request.user)
+        except ValueError as e:  # por ejemplo, una salida mayor al stock
+            form.add_error(None, str(e))
+            return self.form_invalid(form)
+        messages.success(self.request, f"Ajuste registrado: {d['producto']} ({d['cantidad']} u.).")
+        return super().form_valid(form)

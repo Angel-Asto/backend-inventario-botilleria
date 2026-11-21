@@ -6,7 +6,7 @@
   <a class="btn btn-acc" href="{% url 'compras:proveedor_crear' %}">Nuevo proveedor</a>
 </div>
 <form class="row g-2 mb-3" method="get">
-  <div class="col-md-6"><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Buscar por nombre o contacto"></div>
+  <div class="col-md-6"><input class="form-control" name="q" aria-label="Buscar proveedor" value="{{ request.GET.q }}" placeholder="Buscar por nombre o contacto"></div>
   <div class="col-auto"><button class="btn btn-acc">Buscar</button></div>
 </form>
 <div class="table-responsive">
@@ -29,9 +29,9 @@
 </div>
 {% if is_paginated %}
 <nav><ul class="pagination">
-  {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>{% endif %}
+  {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q|urlencode }}">Anterior</a></li>{% endif %}
   <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages }}</span></li>
-  {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Siguiente</a></li>{% endif %}
+  {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q|urlencode }}">Siguiente</a></li>{% endif %}
 </ul></nav>
 {% endif %}
 {% endblock %}

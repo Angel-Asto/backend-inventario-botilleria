@@ -15,12 +15,23 @@ class Venta(models.Model):
 
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ventas')
     fecha = models.DateField(default=timezone.localdate)
+    creada_en = models.DateTimeField(default=timezone.now, editable=False)  # hora exacta (cierre de caja, reportes)
     medio_pago = models.CharField(max_length=20, choices=MedioPago.choices)
     total = models.PositiveIntegerField(default=0)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.COMPLETADA)
+    # Auditoría de la anulación: quién, cuándo y por qué.
+    anulada_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name='ventas_anuladas', editable=False)
+    anulada_en = models.DateTimeField(null=True, blank=True, editable=False)
+    motivo_anulacion = models.CharField(max_length=200, blank=True, editable=False)
 
     class Meta:
         ordering = ['-fecha', '-pk']
+        indexes = [  # listados, reportes por período, ventas de cada vendedor y por estado
+            models.Index(fields=['fecha'], name='venta_fecha_idx'),
+            models.Index(fields=['usuario', 'fecha'], name='venta_usuario_fecha_idx'),
+            models.Index(fields=['estado', 'fecha'], name='venta_estado_fecha_idx'),
+        ]
 
     def __str__(self):
         return f'Venta {self.pk}'
@@ -31,6 +42,11 @@ class DetalleVenta(models.Model):
     producto = models.ForeignKey('productos.Producto', on_delete=models.PROTECT, related_name='detalles_venta')
     cantidad = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     precio_unitario = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(cantidad__gte=1), name='detalleventa_cantidad_positiva'),
+        ]
 
     @property
     def subtotal(self):

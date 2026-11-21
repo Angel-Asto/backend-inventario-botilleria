@@ -21,8 +21,11 @@ class VentaTests(TestCase):
         cls.otro = Usuario.objects.create_user('otro', password='x12345678', rol='trabajador')
         cls.url = reverse('ventas:caja')
 
+    def token(self):
+        return self.client.get(self.url).context['token']
+
     def vender(self, codigos, cantidades, **extra):
-        d = {'codigo': codigos, 'cantidad': cantidades, 'medio_pago': 'efectivo'}
+        d = {'codigo': codigos, 'cantidad': cantidades, 'medio_pago': 'efectivo', 'token': self.token()}
         d.update(extra)
         return self.client.post(self.url, d)
 
@@ -81,6 +84,12 @@ class VentaTests(TestCase):
         self.cerveza.refresh_from_db()
         self.assertEqual(self.cerveza.stock, 10)
 
+    def test_venta_rechazada_conserva_el_carrito(self):
+        self.client.login(username='trab', password='x12345678')
+        r = self.vender(['111', '222'], ['2', '1'])  # falta confirmar mayoría de edad
+        self.assertEqual({p['codigo']: p['cantidad'] for p in r.context['carrito']}, {'111': 2, '222': 1})
+        self.assertContains(r, 'id="carrito-inicial"')
+
     def test_sin_alcohol_no_pide_confirmacion(self):
         self.client.login(username='trab', password='x12345678')
         self.vender(['222'], ['1'])
@@ -111,6 +120,39 @@ class VentaTests(TestCase):
         self.vender(['222'], ['-5'])
         self.assertEqual(Venta.objects.count(), 0)
 
+    def test_cantidades_raras_no_provocan_error_500(self):
+        self.client.login(username='trab', password='x12345678')
+        for cantidad in ('9' * 25, '1.5', '²', 'abc', ''):
+            r = self.vender(['222'], [cantidad])
+            self.assertEqual(r.status_code, 200, cantidad)
+        self.assertEqual(Venta.objects.count(), 0)
+
+    def test_doble_envio_no_crea_dos_ventas(self):
+        self.client.login(username='trab', password='x12345678')
+        d = {'codigo': ['222'], 'cantidad': ['1'], 'medio_pago': 'efectivo', 'token': self.token()}
+        self.client.post(self.url, d)
+        r = self.client.post(self.url, d)  # mismo formulario enviado otra vez
+        self.assertRedirects(r, reverse('ventas:lista'))
+        self.assertEqual(Venta.objects.count(), 1)
+        self.cola.refresh_from_db()
+        self.assertEqual(self.cola.stock, 2)
+
+    def test_envio_sin_token_o_con_token_inventado_se_rechaza(self):
+        self.client.login(username='trab', password='x12345678')
+        for token in (None, 'inventado'):
+            d = {'codigo': ['222'], 'cantidad': ['1'], 'medio_pago': 'efectivo'}
+            if token:
+                d['token'] = token
+            self.client.post(self.url, d)
+        self.assertEqual(Venta.objects.count(), 0)
+
+    def test_cantidad_sobre_el_maximo_se_rechaza(self):
+        self.client.login(username='trab', password='x12345678')
+        r = self.vender(['222'], ['1000'])
+        self.assertContains(r, 'La cantidad máxima por producto es 999')
+        self.cola.refresh_from_db()
+        self.assertEqual(self.cola.stock, 3)
+
     # --- anular
     def crear_venta(self):
         self.client.login(username='trab', password='x12345678')
@@ -121,24 +163,43 @@ class VentaTests(TestCase):
     def test_admin_anula_y_devuelve_stock(self):
         v = self.crear_venta()
         self.client.login(username='adm', password='x12345678')
-        self.client.post(reverse('ventas:anular', args=[v.pk]))
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'})
         v.refresh_from_db(); self.cola.refresh_from_db()
         self.assertEqual(v.estado, 'anulada')
         self.assertEqual(self.cola.stock, 3)
         self.assertTrue(MovimientoStock.objects.filter(tipo='entrada', motivo=f'Anulación venta {v.pk}').exists())
 
+    def test_movimientos_guardan_quien_vendio_y_quien_anulo(self):
+        v = self.crear_venta()
+        self.assertEqual(MovimientoStock.objects.get(motivo=f'Venta {v.pk}').usuario, self.trab)
+        self.client.login(username='adm', password='x12345678')
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Error de digitación'})
+        self.assertEqual(MovimientoStock.objects.get(motivo=f'Anulación venta {v.pk}').usuario, self.admin)
+
+    def test_anulacion_exige_motivo_y_guarda_quien_y_cuando(self):
+        v = self.crear_venta()
+        self.client.login(username='adm', password='x12345678')
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': '   '})
+        v.refresh_from_db()
+        self.assertEqual(v.estado, 'completada')
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Cliente devolvió el producto'})
+        v.refresh_from_db()
+        self.assertEqual((v.estado, v.anulada_por, v.motivo_anulacion), ('anulada', self.admin, 'Cliente devolvió el producto'))
+        self.assertIsNotNone(v.anulada_en)
+        self.assertContains(self.client.get(reverse('ventas:detalle', args=[v.pk])), 'Cliente devolvió el producto')
+
     def test_no_se_anula_dos_veces(self):
         v = self.crear_venta()
         self.client.login(username='adm', password='x12345678')
-        self.client.post(reverse('ventas:anular', args=[v.pk]))
-        self.client.post(reverse('ventas:anular', args=[v.pk]))
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'})
+        self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'})
         self.cola.refresh_from_db()
         self.assertEqual(self.cola.stock, 3)
 
     def test_trabajador_no_puede_anular(self):
         v = self.crear_venta()
         self.client.login(username='trab', password='x12345678')
-        self.assertEqual(self.client.post(reverse('ventas:anular', args=[v.pk])).status_code, 403)
+        self.assertEqual(self.client.post(reverse('ventas:anular', args=[v.pk]), {'motivo': 'Prueba'}).status_code, 403)
         v.refresh_from_db()
         self.assertEqual(v.estado, 'completada')
 
@@ -159,3 +220,11 @@ class VentaTests(TestCase):
         self.client.login(username='adm', password='x12345678')
         self.assertEqual(len(self.client.get(reverse('ventas:lista')).context['object_list']), 1)
         self.assertContains(self.client.get(reverse('ventas:detalle', args=[v.pk])), 'Anular venta')
+
+    def test_comprobante_muestra_la_hora(self):
+        from django.utils import timezone
+        v = self.crear_venta()
+        self.assertLess((timezone.now() - v.creada_en).total_seconds(), 60)
+        self.client.login(username='trab', password='x12345678')
+        hora = timezone.localtime(v.creada_en).strftime('%H:%M')
+        self.assertContains(self.client.get(reverse('ventas:detalle', args=[v.pk])), hora)

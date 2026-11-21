@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load formato %}
+{% block titulo %}Reportes | Botillería{% endblock %}
+{% block contenido %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 m-0">Reportes de ventas</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'reportes:ventas_csv' %}?{{ qs }}"><i class="bi bi-filetype-csv" aria-hidden="true"></i> Ventas (CSV)</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'reportes:productos_csv' %}?{{ qs }}"><i class="bi bi-filetype-csv" aria-hidden="true"></i> Productos (CSV)</a>
+  </div>
+</div>
+
+<form class="row g-2 align-items-end mb-3" method="get">
+  <div class="col-6 col-md-3"><label class="form-label" for="desde">Desde</label>
+    <input class="form-control" type="date" id="desde" name="desde" value="{{ desde|date:'Y-m-d' }}"></div>
+  <div class="col-6 col-md-3"><label class="form-label" for="hasta">Hasta</label>
+    <input class="form-control" type="date" id="hasta" name="hasta" value="{{ hasta|date:'Y-m-d' }}"></div>
+  <div class="col-md-2"><button class="btn btn-acc w-100">Ver período</button></div>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="kpi"><div><span class="v">{{ total|pesos }}</span><span class="l">Total vendido</span></div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><div><span class="v">{{ cantidad }}</span><span class="l">Ventas</span></div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><div><span class="v">{{ ticket_promedio|pesos }}</span><span class="l">Ticket promedio</span></div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><div><span class="v">{{ anuladas }}</span><span class="l">Anuladas (no suman)</span></div></div></div>
+</div>
+
+<div class="card card-body mb-3">
+  <h2 class="h5">Ventas por día</h2>
+  <div class="table-responsive border-0"><table class="table align-middle">
+    <thead><tr><th>Día</th><th class="w-50">Monto</th><th class="text-end">Ventas</th><th class="text-end">Total</th></tr></thead>
+    <tbody>
+    {% for d in dias %}
+      <tr>
+        <td>{{ d.fecha|date:"D d/m" }}</td>
+        <td><div class="progress" role="img" aria-label="{{ d.porcentaje }}% del mejor día"><div class="progress-bar" style="width: {{ d.porcentaje }}%; background: var(--acc)"></div></div></td>
+        <td class="text-end">{{ d.cantidad }}</td>
+        <td class="text-end">{{ d.total|pesos }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6"><div class="card card-body h-100">
+    <h2 class="h5">Por medio de pago</h2>
+    <table class="table"><tbody>
+      {% for m in por_medio %}<tr><td>{{ m.nombre }}</td><td class="text-end">{{ m.cantidad }}</td><td class="text-end">{{ m.total|pesos }}</td></tr>
+      {% empty %}<tr><td class="text-muted">Sin ventas en el período.</td></tr>{% endfor %}
+    </tbody></table>
+  </div></div>
+  <div class="col-md-6"><div class="card card-body h-100">
+    <h2 class="h5">Por vendedor</h2>
+    <table class="table"><tbody>
+      {% for v in por_vendedor %}<tr><td>{{ v.usuario__username }}</td><td class="text-end">{{ v.cantidad }}</td><td class="text-end">{{ v.total|pesos }}</td></tr>
+      {% empty %}<tr><td class="text-muted">Sin ventas en el período.</td></tr>{% endfor %}
+    </tbody></table>
+  </div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6"><div class="card card-body h-100">
+    <h2 class="h5">Más vendidos</h2>
+    <table class="table"><thead><tr><th>Producto</th><th class="text-end">Unidades</th><th class="text-end">Monto</th></tr></thead><tbody>
+      {% for p in mas_vendidos %}<tr><td>{{ p.nombre }}</td><td class="text-end">{{ p.unidades }}</td><td class="text-end">{{ p.monto|pesos }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="text-muted">Sin ventas en el período.</td></tr>{% endfor %}
+    </tbody></table>
+  </div></div>
+  <div class="col-md-6"><div class="card card-body h-100">
+    <h2 class="h5">Menos vendidos</h2>
+    <table class="table"><thead><tr><th>Producto</th><th class="text-end">Unidades</th><th class="text-end">Stock</th></tr></thead><tbody>
+      {% for p in menos_vendidos %}<tr><td>{{ p.nombre }}</td><td class="text-end">{{ p.unidades }}</td><td class="text-end">{{ p.stock }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="text-muted">No hay productos activos.</td></tr>{% endfor %}
+    </tbody></table>
+  </div></div>
+</div>
+{% endblock %}

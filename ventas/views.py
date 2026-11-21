@@ -1,17 +1,18 @@
+import secrets
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
+from django.core.cache import cache
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from inventario.models import MovimientoStock
-from inventario.servicios import registrar_movimiento
 from productos.models import Producto
 from usuarios.views import AdminRequeridoMixin
 
-from .models import DetalleVenta, Venta
+from .models import Venta
+from .servicios import MAX_CANTIDAD_POR_PRODUCTO, VentaInvalida, anular_venta, registrar_venta
 
 
 def _datos_producto(p):
@@ -32,54 +33,55 @@ class BuscarProductoView(LoginRequiredMixin, View):
         return JsonResponse(_datos_producto(p))
 
 
+def _nuevo_token(request):
+    """Token de un solo uso para el formulario de la caja (evita registrar dos veces la misma venta)."""
+    token = secrets.token_urlsafe(16)
+    request.session['caja_tokens'] = (request.session.get('caja_tokens', []) + [token])[-10:]
+    return token
+
+
+def _usar_token(request, token):
+    """True solo la primera vez que llega un token emitido para esta sesión."""
+    if not token or token not in request.session.get('caja_tokens', []):
+        return False
+    request.session['caja_tokens'] = [t for t in request.session['caja_tokens'] if t != token]
+    return cache.add(f'caja:token:{token}', 1, 60 * 60)  # atómico: frena dos envíos simultáneos
+
+
 class CajaView(LoginRequiredMixin, View):
     """HU-13 a HU-15 y HU-17: escanear, totalizar, confirmar edad y cobrar."""
     template_name = 'ventas/caja.html'
 
+    def render_caja(self, request, carrito):
+        return render(request, self.template_name, {'carrito': carrito, 'token': _nuevo_token(request)})
+
     def get(self, request):
-        return render(request, self.template_name, {'carrito': []})
+        return self.render_caja(request, [])
 
     def post(self, request):
+        if not _usar_token(request, request.POST.get('token')):
+            messages.error(request, 'Esta venta ya se había enviado. Revisa el historial antes de cobrar de nuevo.')
+            return redirect('ventas:lista')
         items = {}
         for codigo, cantidad in zip(request.POST.getlist('codigo'), request.POST.getlist('cantidad')):
-            try:
-                n = int(cantidad)
-            except ValueError:
-                n = 0
+            cantidad = (cantidad or '').strip()
+            if not (cantidad.isascii() and cantidad.isdigit()):  # descarta textos, negativos y decimales
+                continue
+            # Más de 6 dígitos ya supera el máximo: no se convierte un número gigante (evitaba un error 500).
+            n = int(cantidad) if len(cantidad) <= 6 else MAX_CANTIDAD_POR_PRODUCTO + 1
             if n > 0:
+                codigo = codigo.strip()
                 items[codigo] = items.get(codigo, 0) + n
 
-        productos = {p.codigo_barras: p for p in
-                     Producto.objects.select_related('categoria').filter(codigo_barras__in=items, activo=True)}
-        carrito = [dict(_datos_producto(productos[c]), cantidad=n) for c, n in items.items() if c in productos]
-        medio = request.POST.get('medio_pago')
-
-        def error(msg):
-            messages.error(request, msg)
-            return render(request, self.template_name, {'carrito': carrito})
-
-        if not items:
-            return error('Escanea al menos un producto.')
-        if len(productos) != len(items):
-            return error('Hay productos que no existen o fueron dados de baja.')
-        if medio not in Venta.MedioPago.values:
-            return error('Elige el medio de pago.')
-        if any(p.categoria.es_alcoholica for p in productos.values()) and not request.POST.get('mayor_edad'):
-            return error('Confirma que el cliente es mayor de 18 años para vender alcohol.')
-
         try:
-            with transaction.atomic():
-                venta = Venta.objects.create(usuario=request.user, medio_pago=medio)
-                total = 0
-                for codigo, n in items.items():
-                    p = productos[codigo]
-                    DetalleVenta.objects.create(venta=venta, producto=p, cantidad=n, precio_unitario=p.precio)
-                    registrar_movimiento(p, MovimientoStock.Tipo.SALIDA, n, f'Venta {venta.pk}')
-                    total += n * p.precio
-                venta.total = total
-                venta.save(update_fields=['total'])
-        except ValueError as e:  # stock insuficiente: nada queda a medias
-            return error(str(e))
+            venta = registrar_venta(request.user, items, request.POST.get('medio_pago'),
+                                    mayor_edad=bool(request.POST.get('mayor_edad')))
+        except VentaInvalida as e:
+            productos = {p.codigo_barras: p for p in
+                         Producto.objects.select_related('categoria').filter(codigo_barras__in=items, activo=True)}
+            carrito = [dict(_datos_producto(productos[c]), cantidad=n) for c, n in items.items() if c in productos]
+            messages.error(request, str(e))
+            return self.render_caja(request, carrito)
         messages.success(request, 'Venta registrada.')
         return redirect('ventas:detalle', pk=venta.pk)
 
@@ -102,7 +104,7 @@ class VentaDetalleView(LoginRequiredMixin, DetailView):
     template_name = 'ventas/venta_detalle.html'
 
     def get_queryset(self):
-        qs = Venta.objects.select_related('usuario').prefetch_related('detalles__producto')
+        qs = Venta.objects.select_related('usuario', 'anulada_por').prefetch_related('detalles__producto')
         if not self.request.user.es_admin:
             qs = qs.filter(usuario=self.request.user)
         return qs
@@ -112,14 +114,14 @@ class VentaAnularView(AdminRequeridoMixin, View):
     """HU-16: anula la venta y devuelve el stock."""
 
     def post(self, request, pk):
-        with transaction.atomic():
-            venta = Venta.objects.select_for_update().get(pk=pk)
-            if venta.estado == Venta.Estado.ANULADA:
-                messages.error(request, 'La venta ya estaba anulada.')
-                return redirect('ventas:detalle', pk=pk)
-            for d in venta.detalles.select_related('producto'):
-                registrar_movimiento(d.producto, MovimientoStock.Tipo.ENTRADA, d.cantidad, f'Anulación venta {venta.pk}')
-            venta.estado = Venta.Estado.ANULADA
-            venta.save(update_fields=['estado'])
-        messages.success(request, 'Venta anulada y stock devuelto.')
+        get_object_or_404(Venta, pk=pk)
+        try:
+            anulada = anular_venta(pk, request.user, request.POST.get('motivo'))
+        except VentaInvalida as e:
+            messages.error(request, str(e))
+            return redirect('ventas:detalle', pk=pk)
+        if anulada:
+            messages.success(request, 'Venta anulada y stock devuelto.')
+        else:
+            messages.error(request, 'La venta ya estaba anulada.')
         return redirect('ventas:detalle', pk=pk)

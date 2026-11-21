@@ -3,13 +3,16 @@
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 m-0">Historial de movimientos</h1>
-  <span class="badge bg-secondary">HU-12</span>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="badge bg-secondary">HU-12</span>
+    <a class="btn btn-acc btn-sm" href="{% url 'inventario:ajuste' %}"><i class="bi bi-sliders" aria-hidden="true"></i> Ajuste de stock</a>
+  </div>
 </div>
 
 <form class="row g-2 mb-3" method="get">
-  <div class="col-md-5"><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Producto o motivo"></div>
+  <div class="col-md-5"><input class="form-control" name="q" aria-label="Buscar por producto o motivo" value="{{ request.GET.q }}" placeholder="Producto o motivo"></div>
   <div class="col-md-3">
-    <select class="form-select" name="tipo">
+    <select class="form-select" name="tipo" aria-label="Tipo de movimiento">
       <option value="">Todos los tipos</option>
       {% for valor, nombre in tipos %}<option value="{{ valor }}" {% if request.GET.tipo == valor %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
     </select>
@@ -19,16 +22,16 @@
 
 <div class="table-responsive">
 <table class="table table-striped align-middle">
-  <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
+  <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th><th>Usuario</th></tr></thead>
   <tbody>
   {% for m in object_list %}
     <tr>
       <td>{{ m.fecha|date:"d/m/Y H:i" }}</td><td>{{ m.producto.nombre }}</td>
       <td><span class="badge {% if m.tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}">{{ m.get_tipo_display }}</span></td>
-      <td>{{ m.cantidad }}</td><td>{{ m.motivo }}</td>
+      <td>{{ m.cantidad }}</td><td>{{ m.motivo }}</td><td>{{ m.usuario.username|default:"—" }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="5" class="text-center text-muted">Sin movimientos.</td></tr>
+    <tr><td colspan="6" class="text-center text-muted">Sin movimientos.</td></tr>
   {% endfor %}
   </tbody>
 </table>

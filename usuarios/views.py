@@ -21,7 +21,34 @@ class IniciarSesionView(LoginView):
 
 
 class InicioView(LoginRequiredMixin, TemplateView):
+    """Panel con los indicadores del día. El admin ve todo el local; el trabajador, solo sus ventas."""
     template_name = 'usuarios/inicio.html'
+
+    def get_context_data(self, **kwargs):
+        from django.db.models import Count, F, Sum
+        from django.utils import timezone
+
+        from productos.models import Producto
+        from ventas.models import Venta
+
+        ctx = super().get_context_data(**kwargs)
+        user = self.request.user
+        ventas = Venta.objects.select_related('usuario')
+        if not user.es_admin:
+            ventas = ventas.filter(usuario=user)
+        hoy = ventas.filter(fecha=timezone.localdate(), estado=Venta.Estado.COMPLETADA)
+        resumen = hoy.aggregate(total=Sum('total'), cantidad=Count('id'))
+        total, cantidad = resumen['total'] or 0, resumen['cantidad']
+        bajo = Producto.objects.filter(activo=True, stock__lt=F('stock_minimo')).order_by('stock', 'nombre')
+        ctx.update({
+            'ventas_hoy_total': total,
+            'ventas_hoy_cantidad': cantidad,
+            'ticket_promedio': total // cantidad if cantidad else 0,
+            'stock_bajo_cantidad': bajo.count(),
+            'stock_bajo': bajo[:5],
+            'ultimas_ventas': ventas[:5],
+        })
+        return ctx
 
 
 class CambiarContrasenaView(PasswordChangeView):

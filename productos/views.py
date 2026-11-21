@@ -1,10 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from inventario.models import MovimientoStock
+from inventario.servicios import registrar_movimiento
 from usuarios.views import AdminRequeridoMixin
 
 from .forms import CategoriaForm, ProductoForm
@@ -49,8 +52,16 @@ class ProductoCrearView(AdminRequeridoMixin, CreateView):
     extra_context = {'titulo': 'Registrar producto', 'volver': reverse_lazy('productos:lista')}
 
     def form_valid(self, form):
+        # El stock inicial entra como movimiento, para que el historial cuadre con el stock.
+        stock_inicial = form.cleaned_data.get('stock') or 0
+        with transaction.atomic():
+            form.instance.stock = 0
+            respuesta = super().form_valid(form)
+            if stock_inicial:
+                registrar_movimiento(self.object, MovimientoStock.Tipo.ENTRADA, stock_inicial, 'Stock inicial',
+                                     self.request.user)
         messages.success(self.request, 'Producto registrado correctamente.')
-        return super().form_valid(form)
+        return respuesta
 
 
 class ProductoEditarView(AdminRequeridoMixin, UpdateView):

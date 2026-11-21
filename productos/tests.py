@@ -42,6 +42,21 @@ class ProductoTests(TestCase):
         self.client.post(reverse('productos:crear'), self.datos())
         self.assertTrue(Producto.objects.filter(codigo_barras='9999').exists())
 
+    def test_stock_inicial_queda_como_movimiento(self):
+        from inventario.models import MovimientoStock
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:crear'), self.datos(stock=10))
+        p = Producto.objects.get(codigo_barras='9999')
+        self.assertEqual(p.stock, 10)
+        m = MovimientoStock.objects.get(producto=p)
+        self.assertEqual((m.tipo, m.cantidad, m.motivo), ('entrada', 10, 'Stock inicial'))
+
+    def test_producto_sin_stock_inicial_no_deja_movimiento(self):
+        from inventario.models import MovimientoStock
+        self.client.login(username='admin1', password=CLAVE)
+        self.client.post(reverse('productos:crear'), self.datos(stock=0))
+        self.assertFalse(MovimientoStock.objects.exists())
+
     def test_codigo_de_barras_no_se_repite(self):
         self.client.login(username='admin1', password=CLAVE)
         r = self.client.post(reverse('productos:crear'), self.datos(codigo_barras='7802'))
@@ -77,3 +92,45 @@ class ProductoTests(TestCase):
         self.client.login(username='admin1', password=CLAVE)
         self.client.post(reverse('productos:categoria_eliminar', args=[self.cat.pk]))
         self.assertTrue(Categoria.objects.filter(pk=self.cat.pk).exists())
+
+class ReglasEnBaseDeDatosTests(TestCase):
+    """Las reglas se cumplen aunque los datos no vengan del formulario (admin, scripts, fixtures)."""
+
+    def test_precio_cero_y_cantidades_cero_se_rechazan_en_la_bd(self):
+        from django.db import IntegrityError, transaction
+        from inventario.models import MovimientoStock
+        cat = Categoria.objects.create(nombre='X')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Producto.objects.create(categoria=cat, codigo_barras='0', nombre='Gratis', precio=0)
+        p = Producto.objects.create(categoria=cat, codigo_barras='1', nombre='Uno', precio=100)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            MovimientoStock.objects.create(producto=p, tipo='entrada', cantidad=0, motivo='x')
+
+
+class FormatoPesosTests(TestCase):
+    def test_formato_chileno(self):
+        from productos.templatetags.formato import pesos
+        self.assertEqual(pesos(1990), '$1.990')
+        self.assertEqual(pesos(1234567), '$1.234.567')
+        self.assertEqual(pesos(0), '$0')
+        self.assertEqual(pesos('texto'), 'texto')
+
+
+class FixtureCatalogoTests(TestCase):
+    def test_catalogo_se_carga_dos_veces_sin_duplicar(self):
+        from django.core.management import call_command
+        call_command('loaddata', 'catalogo', verbosity=0)
+        call_command('loaddata', 'catalogo', verbosity=0)
+        self.assertEqual(Categoria.objects.count(), 5)
+        self.assertEqual(Producto.objects.count(), 12)
+        self.assertTrue(Categoria.objects.get(nombre='Vinos').es_alcoholica)
+        self.assertFalse(Producto.objects.filter(stock__gt=0).exists())  # el stock entra con movimientos
+
+    def test_codigos_de_barras_son_ean13_validos(self):
+        import json
+        from pathlib import Path
+        datos = json.loads((Path(__file__).parent / 'fixtures' / 'catalogo.json').read_text(encoding='utf-8'))
+        for d in (x for x in datos if x['model'] == 'productos.producto'):
+            c = d['fields']['codigo_barras']
+            suma = sum(int(n) * (3 if i % 2 else 1) for i, n in enumerate(c[:12]))
+            self.assertEqual((10 - suma % 10) % 10, int(c[12]), c)
