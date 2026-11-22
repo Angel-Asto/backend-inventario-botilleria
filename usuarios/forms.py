@@ -63,3 +63,24 @@ class UsuarioCreacionForm(EstiloBootstrapMixin, UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = Usuario
         fields = ('username', 'first_name', 'last_name', 'email', 'rol')
+
+
+class PerfilForm(EstiloBootstrapMixin, forms.ModelForm):
+    """Datos que cada usuario puede cambiar de sí mismo. El rol y el usuario quedan fuera a propósito:
+    aunque alguien los envíe a mano en el formulario, Django ignora los campos que no están en `fields`."""
+
+    class Meta:
+        model = Usuario
+        fields = ('first_name', 'last_name', 'email')
+        labels = {'first_name': 'Nombre', 'last_name': 'Apellido', 'email': 'Correo'}
+        error_messages = {
+            'first_name': {'required': 'Ingresa tu nombre.'},
+            'email': {'invalid': 'Ingresa un correo válido, por ejemplo nombre@botilleria.cl.'},
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['first_name'].required = True  # el nombre aparece en ventas y comprobantes
+
+    def clean_email(self):
+        return self.cleaned_data['email'].strip().lower()

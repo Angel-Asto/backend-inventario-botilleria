@@ -283,3 +283,59 @@ class ConfiguracionTests(TestCase):
         r = subprocess.run([sys.executable, '-c', codigo], cwd=Path(settings.BASE_DIR), env=entorno,
                            capture_output=True, text=True, timeout=60)
         self.assertEqual(r.stdout.strip(), 'django.db.backends.sqlite3', r.stderr[-500:])
+
+
+class PerfilTests(TestCase):
+    """Página de perfil: muestra el rol y solo deja editar los datos propios permitidos."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.trab = Usuario.objects.create_user('trab', password=CLAVE, rol='trabajador', first_name='Tomás')
+        cls.admin = Usuario.objects.create_user('adm', password=CLAVE, rol='admin', first_name='Ana')
+        cls.url = reverse('usuarios:perfil')
+
+    def datos(self, **extra):
+        d = {'first_name': 'Tomás', 'last_name': 'Cajero', 'email': 'tomas@botilleria.cl'}
+        d.update(extra)
+        return d
+
+    def test_exige_login(self):
+        self.assertEqual(self.client.get(self.url).status_code, 302)
+
+    def test_muestra_el_rol_y_lo_que_puede_hacer(self):
+        self.client.login(username='trab', password=CLAVE)
+        r = self.client.get(self.url)
+        self.assertContains(r, 'Rol: Trabajador')
+        self.assertContains(r, 'Registrar ventas en la caja')
+        self.assertNotContains(r, 'Ver los reportes de todo el local')
+        self.client.login(username='adm', password=CLAVE)
+        self.assertContains(self.client.get(self.url), 'Rol: Admin')
+
+    def test_edita_nombre_y_correo(self):
+        self.client.login(username='trab', password=CLAVE)
+        r = self.client.post(self.url, self.datos(email='  Tomas@Botilleria.CL '))
+        self.assertRedirects(r, self.url)
+        self.trab.refresh_from_db()
+        self.assertEqual((self.trab.last_name, self.trab.email), ('Cajero', 'tomas@botilleria.cl'))
+
+    def test_correo_invalido_y_nombre_vacio_se_rechazan(self):
+        self.client.login(username='trab', password=CLAVE)
+        r = self.client.post(self.url, self.datos(email='tomas@', first_name='   '))
+        self.assertContains(r, 'Ingresa un correo válido')
+        self.assertContains(r, 'Ingresa tu nombre.')
+        self.trab.refresh_from_db()
+        self.assertEqual((self.trab.first_name, self.trab.email), ('Tomás', ''))
+
+    def test_no_puede_cambiarse_el_rol_ni_el_usuario(self):
+        self.client.login(username='trab', password=CLAVE)
+        self.client.post(self.url, self.datos(rol='admin', username='jefe', is_staff='on', is_superuser='on'))
+        self.trab.refresh_from_db()
+        self.assertEqual((self.trab.rol, self.trab.username, self.trab.is_staff, self.trab.is_superuser),
+                         ('trabajador', 'trab', False, False))
+        self.assertFalse(self.trab.es_admin)
+
+    def test_solo_edita_su_propio_perfil(self):
+        self.client.login(username='trab', password=CLAVE)
+        self.client.post(self.url, self.datos(last_name='Cambiado'))
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.last_name, '')  # el perfil no recibe id: no hay forma de apuntar a otro usuario

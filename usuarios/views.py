@@ -2,10 +2,46 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView, TemplateView
+from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
-from .forms import CambioContrasenaForm, LoginForm, UsuarioCreacionForm
+from .forms import CambioContrasenaForm, LoginForm, PerfilForm, UsuarioCreacionForm
 from .models import Usuario
+
+# Qué puede hacer cada rol (se muestra en el perfil).
+PERMISOS_POR_ROL = {
+    Usuario.Rol.ADMIN: [
+        'Registrar ventas y anularlas indicando un motivo',
+        'Administrar productos, categorías, proveedores y compras',
+        'Ajustar el stock y ver el historial de movimientos',
+        'Ver los reportes de todo el local y crear usuarios',
+    ],
+    Usuario.Rol.TRABAJADOR: [
+        'Registrar ventas en la caja',
+        'Ver sus propias ventas y comprobantes',
+        'Consultar el catálogo y el stock actual',
+    ],
+}
+
+
+class PerfilView(LoginRequiredMixin, UpdateView):
+    """Perfil del usuario que inició sesión. No recibe un id en la URL: nadie puede abrir el perfil de otro."""
+    form_class = PerfilForm
+    template_name = 'usuarios/perfil.html'
+    success_url = reverse_lazy('usuarios:perfil')
+
+    def get_object(self, queryset=None):
+        # Una copia fresca: si el formulario trae errores, la tarjeta (request.user) no muestra datos inválidos.
+        return Usuario.objects.get(pk=self.request.user.pk)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        rol = Usuario.Rol.ADMIN if self.request.user.es_admin else self.request.user.rol
+        ctx['permisos'] = PERMISOS_POR_ROL.get(rol, [])
+        return ctx
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Perfil actualizado correctamente.')
+        return super().form_valid(form)
 
 
 class AdminRequeridoMixin(LoginRequiredMixin, UserPassesTestMixin):

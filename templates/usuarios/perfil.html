@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block titulo %}Mi perfil | Botillería{% endblock %}
+{% block contenido %}
+<h1 class="h3 mb-3">Mi perfil</h1>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card card-body">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <span class="avatar" style="width:52px;height:52px;font-size:1.3rem" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+        <div>
+          <div class="fw-semibold">{{ user.get_full_name|default:user.username }}</div>
+          <span class="badge {% if user.es_admin %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+            Rol: {% if user.is_superuser and not user.rol == 'admin' %}Admin (superusuario){% else %}{{ user.get_rol_display }}{% endif %}
+          </span>
+        </div>
+      </div>
+      <dl class="row mb-0 small">
+        <dt class="col-5 text-muted fw-normal">Usuario</dt><dd class="col-7">{{ user.username }}</dd>
+        <dt class="col-5 text-muted fw-normal">Correo</dt><dd class="col-7">{{ user.email|default:"—" }}</dd>
+        <dt class="col-5 text-muted fw-normal">Cuenta creada</dt><dd class="col-7">{{ user.date_joined|date:"d/m/Y" }}</dd>
+        <dt class="col-5 text-muted fw-normal">Último ingreso</dt><dd class="col-7">{{ user.last_login|date:"d/m/Y H:i"|default:"—" }}</dd>
+      </dl>
+      <h2 class="h6 mt-3 mb-2">Con tu rol puedes</h2>
+      <ul class="small mb-0 ps-3">
+        {% for p in permisos %}<li>{{ p }}</li>{% endfor %}
+      </ul>
+      <p class="small text-muted mt-3 mb-0">El rol solo lo puede cambiar un administrador.</p>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card card-body">
+      <h2 class="h5">Editar mis datos</h2>
+      <form method="post" novalidate>{% csrf_token %}
+        {% include 'includes/campos.html' %}
+        <div class="d-flex gap-2">
+          <button class="btn btn-acc" type="submit">Guardar cambios</button>
+          <a class="btn btn-outline-secondary" href="{% url 'usuarios:cambiar_contrasena' %}"><i class="bi bi-key" aria-hidden="true"></i> Cambiar contraseña</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
