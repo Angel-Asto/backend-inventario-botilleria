@@ -67,6 +67,32 @@ class CompraTests(TestCase):
         self.p1.refresh_from_db()
         self.assertEqual(self.p1.stock, 2)
 
+    def test_fecha_futura_se_rechaza_sin_tocar_el_stock(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        self.client.login(username='adm', password='x12345678')
+        manana = (timezone.localdate() + timedelta(days=1)).isoformat()
+        r = self.client.post(self.url, self.datos(fecha=manana))
+        self.assertContains(r, 'La fecha de la compra no puede ser futura.')
+        self.assertEqual(Compra.objects.count(), 0)
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.stock, 2)
+
+    def test_fecha_invalida_o_vacia_se_rechaza(self):
+        self.client.login(username='adm', password='x12345678')
+        r = self.client.post(self.url, self.datos(fecha='2026-02-31'))
+        self.assertContains(r, 'Ingresa una fecha válida')
+        r = self.client.post(self.url, self.datos(fecha=''))
+        self.assertContains(r, 'obligatorio')
+        self.assertEqual(Compra.objects.count(), 0)
+
+    def test_fecha_de_hoy_se_acepta(self):
+        from django.utils import timezone
+        self.client.login(username='adm', password='x12345678')
+        self.client.post(self.url, self.datos(fecha=timezone.localdate().isoformat()))
+        self.assertEqual(Compra.objects.count(), 1)
+
     def test_historial_lista_la_compra(self):
         self.client.login(username='adm', password='x12345678')
         self.client.post(self.url, self.datos())
