@@ -339,3 +339,83 @@ class PerfilTests(TestCase):
         self.client.post(self.url, self.datos(last_name='Cambiado'))
         self.admin.refresh_from_db()
         self.assertEqual(self.admin.last_name, '')  # el perfil no recibe id: no hay forma de apuntar a otro usuario
+
+
+class RestablecerClaveTests(TestCase):
+    """El admin reemplaza la clave de otro usuario confirmando con la suya; nunca puede verla."""
+
+    NUEVA = 'Clave-nueva-789'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = Usuario.objects.create_user('adm', password=CLAVE, rol='admin')
+        cls.trab = Usuario.objects.create_user('trab', password=CLAVE, rol='trabajador')
+        cls.root = Usuario.objects.create_superuser('root', password=CLAVE)
+
+    def setUp(self):
+        cache.clear()
+
+    def url(self, u):
+        return reverse('usuarios:restablecer_clave', args=[u.pk])
+
+    def datos(self, **extra):
+        d = {'new_password1': self.NUEVA, 'new_password2': self.NUEVA, 'clave_admin': CLAVE}
+        d.update(extra)
+        return d
+
+    def test_trabajador_no_accede_ni_sabe_si_el_usuario_existe(self):
+        self.client.login(username='trab', password=CLAVE)
+        self.assertEqual(self.client.get(self.url(self.admin)).status_code, 403)
+        self.assertEqual(self.client.get('/usuarios/99999/clave/').status_code, 403)
+        self.assertEqual(self.client.post(self.url(self.admin), self.datos()).status_code, 403)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.check_password(CLAVE))
+
+    def test_admin_restablece_con_su_clave_y_cierra_las_sesiones_del_usuario(self):
+        otro = self.client_class()
+        otro.login(username='trab', password=CLAVE)
+        self.client.login(username='adm', password=CLAVE)
+        r = self.client.post(self.url(self.trab), self.datos())
+        self.assertRedirects(r, reverse('usuarios:lista'))
+        self.trab.refresh_from_db(); self.admin.refresh_from_db()
+        self.assertTrue(self.trab.check_password(self.NUEVA))
+        self.assertTrue(self.admin.check_password(CLAVE))  # la del admin no cambia
+        self.assertEqual(otro.get(reverse('usuarios:inicio')).status_code, 302)  # su sesión se cerró
+
+    def test_clave_del_admin_incorrecta_no_cambia_nada(self):
+        self.client.login(username='adm', password=CLAVE)
+        r = self.client.post(self.url(self.trab), self.datos(clave_admin='equivocada'))
+        self.assertContains(r, 'Tu contraseña no es correcta.')
+        self.trab.refresh_from_db()
+        self.assertTrue(self.trab.check_password(CLAVE))
+
+    def test_clave_debil_o_distinta_se_rechaza(self):
+        self.client.login(username='adm', password=CLAVE)
+        self.client.post(self.url(self.trab), self.datos(new_password1='12345678', new_password2='12345678'))
+        self.client.post(self.url(self.trab), self.datos(new_password2='Otra-distinta-1'))
+        self.trab.refresh_from_db()
+        self.assertTrue(self.trab.check_password(CLAVE))
+
+    def test_admin_no_restablece_a_un_superusuario_ni_a_si_mismo(self):
+        self.client.login(username='adm', password=CLAVE)
+        self.assertEqual(self.client.post(self.url(self.root), self.datos()).status_code, 403)
+        self.root.refresh_from_db()
+        self.assertTrue(self.root.check_password(CLAVE))
+        r = self.client.get(self.url(self.admin))
+        self.assertRedirects(r, reverse('usuarios:cambiar_contrasena'))
+
+    def test_errores_repetidos_de_la_clave_del_admin_lo_bloquean(self):
+        self.client.login(username='adm', password=CLAVE)
+        for _ in range(MAX_INTENTOS_USUARIO):
+            self.client.post(self.url(self.trab), self.datos(clave_admin='mala'))
+        r = self.client.post(self.url(self.trab), self.datos())  # ahora con la clave correcta
+        self.assertContains(r, 'Demasiados intentos fallidos')
+        self.trab.refresh_from_db()
+        self.assertTrue(self.trab.check_password(CLAVE))
+
+    def test_lista_muestra_el_boton_solo_donde_corresponde(self):
+        self.client.login(username='adm', password=CLAVE)
+        r = self.client.get(reverse('usuarios:lista'))
+        self.assertContains(r, self.url(self.trab))
+        self.assertNotContains(r, self.url(self.root))
+        self.assertNotContains(r, self.url(self.admin))

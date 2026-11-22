@@ -1,7 +1,7 @@
 import logging
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, SetPasswordForm, UserCreationForm
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 
@@ -84,3 +84,36 @@ class PerfilForm(EstiloBootstrapMixin, forms.ModelForm):
 
     def clean_email(self):
         return self.cleaned_data['email'].strip().lower()
+
+
+class RestablecerClaveForm(EstiloBootstrapMixin, SetPasswordForm):
+    """El administrador asigna una contraseña nueva a otro usuario, confirmando con su propia contraseña.
+
+    Las contraseñas se guardan con hash y no se pueden ver: solo se pueden reemplazar.
+    SetPasswordForm valida que las dos claves nuevas coincidan y cumplan las reglas de contraseña segura.
+    """
+
+    clave_admin = forms.CharField(
+        label='Tu contraseña (administrador)', strip=False,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'current-password'}),
+        help_text='Confirma que eres tú quien hace el cambio.',
+    )
+
+    def __init__(self, usuario, admin, *args, **kwargs):
+        self.admin = admin
+        super().__init__(usuario, *args, **kwargs)
+        self.fields['new_password1'].label = 'Contraseña nueva'
+        self.fields['new_password2'].label = 'Repite la contraseña nueva'
+
+    def clean_clave_admin(self):
+        clave = self.cleaned_data['clave_admin']
+        # Un error aquí cuenta como intento fallido de login del admin: no sirve para adivinar su clave.
+        clave_cache = f'login:usuario:{self.admin.username.lower()}'
+        if cache.get(clave_cache, 0) >= MAX_INTENTOS_USUARIO:
+            raise ValidationError('Demasiados intentos fallidos. Espera 15 minutos.', code='bloqueado')
+        if not self.admin.check_password(clave):
+            cache.add(clave_cache, 0, BLOQUEO_SEGUNDOS)
+            cache.incr(clave_cache)
+            log.warning('Confirmación fallida al restablecer clave: admin=%s usuario=%s', self.admin.username, self.user.username)
+            raise ValidationError('Tu contraseña no es correcta.', code='clave_admin')
+        return clave

@@ -13,4 +13,5 @@ urlpatterns = [
     path('cambiar-contrasena/', views.CambiarContrasenaView.as_view(), name='cambiar_contrasena'),
     path('usuarios/', views.UsuarioListaView.as_view(), name='lista'),
     path('usuarios/nuevo/', views.UsuarioCrearView.as_view(), name='crear'),
+    path('usuarios/<int:pk>/clave/', views.UsuarioRestablecerClaveView.as_view(), name='restablecer_clave'),
 ]
