@@ -131,3 +131,27 @@ class ProveedorTests(TestCase):
         Compra.objects.create(proveedor=p)
         self.client.post(reverse('compras:proveedor_eliminar', args=[p.pk]))
         self.assertTrue(Proveedor.objects.filter(pk=p.pk).exists())
+
+    def test_correo_con_formato_invalido_se_rechaza(self):
+        self.client.login(username='adm2', password='x12345678')
+        for correo in ('ventas', 'ventas@', '@proveedor.cl', 'ventas proveedor.cl', 'ventas@@proveedor.cl'):
+            r = self.client.post(reverse('compras:proveedor_crear'),
+                                 {'nombre': 'Viña Sur', 'contacto': '+56911111111', 'correo': correo})
+            self.assertContains(r, 'Ingresa un correo válido', msg_prefix=correo)
+        self.assertEqual(Proveedor.objects.count(), 0)
+
+    def test_correo_valido_se_guarda_en_minusculas_y_es_opcional(self):
+        self.client.login(username='adm2', password='x12345678')
+        self.client.post(reverse('compras:proveedor_crear'),
+                         {'nombre': 'Viña Sur', 'contacto': '+56911111111', 'correo': '  Ventas@VinaSur.CL '})
+        self.client.post(reverse('compras:proveedor_crear'), {'nombre': 'Sin correo', 'contacto': '+56922222222', 'correo': ''})
+        self.assertEqual(Proveedor.objects.get(nombre='Viña Sur').correo, 'ventas@vinasur.cl')
+        self.assertEqual(Proveedor.objects.get(nombre='Sin correo').correo, '')
+        r = self.client.get(reverse('compras:proveedor_lista'), {'q': 'vinasur'})
+        self.assertContains(r, 'Viña Sur')
+
+    def test_nombre_y_contacto_con_solo_espacios_se_rechazan(self):
+        self.client.login(username='adm2', password='x12345678')
+        r = self.client.post(reverse('compras:proveedor_crear'), {'nombre': '   ', 'contacto': '   ', 'correo': ''})
+        self.assertContains(r, 'obligatorio')
+        self.assertEqual(Proveedor.objects.count(), 0)

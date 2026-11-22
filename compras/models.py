@@ -6,7 +6,9 @@ from django.utils import timezone
 
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=120)
-    contacto = models.CharField(max_length=120)
+    contacto = models.CharField('teléfono o contacto', max_length=120)
+    # EmailField valida el formato (usuario@dominio.cl) en el formulario. Opcional para los proveedores ya creados.
+    correo = models.EmailField('correo', blank=True)
 
     class Meta:
         ordering = ['nombre']

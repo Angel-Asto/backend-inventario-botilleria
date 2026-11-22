@@ -32,7 +32,10 @@ USUARIOS = [  # (username, nombre, apellido, rol, variable de entorno)
     ('admin_demo', 'Ana', 'Administradora', Usuario.Rol.ADMIN, 'DEMO_ADMIN_PASSWORD'),
     ('trabajador_demo', 'Tomás', 'Cajero', Usuario.Rol.TRABAJADOR, 'DEMO_WORKER_PASSWORD'),
 ]
-PROVEEDORES = [('Distribuidora Central', '+56 9 1111 2222'), ('Viña del Valle', 'ventas@vinadelvalle.example')]
+PROVEEDORES = [  # (nombre, teléfono o contacto, correo)
+    ('Distribuidora Central', '+56 9 1111 2222', 'pedidos@distribuidoracentral.example'),
+    ('Viña del Valle', '+56 9 3333 4444', 'ventas@vinadelvalle.example'),
+]
 # Stock con el que parte cada producto (código de barras -> unidades); algunos quedan bajo el mínimo a propósito.
 STOCK_INICIAL = {
     '7800000000016': 48, '7800000000023': 24, '7800000000030': 5, '7800000000047': 12, '7800000000054': 10,
@@ -95,7 +98,8 @@ class Command(BaseCommand):
         return productos
 
     def _proveedores(self):
-        return [Proveedor.objects.update_or_create(nombre=n, defaults={'contacto': c})[0] for n, c in PROVEEDORES]
+        return [Proveedor.objects.update_or_create(nombre=n, defaults={'contacto': c, 'correo': e})[0]
+                for n, c, e in PROVEEDORES]
 
     def _compra_y_venta(self, usuarios, productos, proveedores):
         admin, cajero = usuarios['admin_demo'], usuarios['trabajador_demo']

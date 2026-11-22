@@ -10,7 +10,13 @@ from .models import Compra, DetalleCompra, Proveedor
 class ProveedorForm(EstiloBootstrapMixin, forms.ModelForm):
     class Meta:
         model = Proveedor
-        fields = ('nombre', 'contacto')
+        fields = ('nombre', 'contacto', 'correo')
+        labels = {'contacto': 'Teléfono o contacto'}
+        help_texts = {'correo': 'Opcional. Ejemplo: ventas@proveedor.cl'}
+        error_messages = {'correo': {'invalid': 'Ingresa un correo válido, por ejemplo ventas@proveedor.cl.'}}
+
+    def clean_correo(self):
+        return self.cleaned_data['correo'].strip().lower()
 
 
 class CompraForm(EstiloBootstrapMixin, forms.ModelForm):

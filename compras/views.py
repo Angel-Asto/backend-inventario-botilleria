@@ -24,7 +24,7 @@ class ProveedorListaView(AdminRequeridoMixin, ListView):
         qs = Proveedor.objects.all()
         q = self.request.GET.get('q', '').strip()
         if q:
-            qs = qs.filter(Q(nombre__icontains=q) | Q(contacto__icontains=q))
+            qs = qs.filter(Q(nombre__icontains=q) | Q(contacto__icontains=q) | Q(correo__icontains=q))
         return qs
 
 
