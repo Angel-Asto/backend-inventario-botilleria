@@ -11,22 +11,24 @@
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"
         integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
-  <link href="{% static 'css/tema.css' %}" rel="stylesheet">
+  {# ?v= obliga al navegador a descargar el archivo nuevo: súbelo cada vez que cambie tema.css #}
+  <link href="{% static 'css/tema.css' %}?v=3" rel="stylesheet">
 </head>
 <body class="{% block clase_body %}{% endblock %}">
   {% block menu %}
   {% if user.is_authenticated %}
-  <nav class="bnav">
+  {# En el celular la barra inferior muestra solo los accesos "prim"; el resto se abre con el botón "Más". #}
+  <nav class="bnav" id="menu" aria-label="Menú principal">
     <div class="brand"><i class="bi bi-shop"></i>Botillería<small>{{ user.get_rol_display }}</small></div>
 
     <div class="grp">Operación</div>
-    <a class="m" href="{% url 'usuarios:inicio' %}"><i class="bi bi-speedometer2"></i><span>Panel</span></a>
-    <a class="m" href="{% url 'ventas:caja' %}"><i class="bi bi-upc-scan"></i><span>Nueva venta</span></a>
+    <a class="m prim" href="{% url 'usuarios:inicio' %}"><i class="bi bi-speedometer2"></i><span>Panel</span></a>
+    <a class="m prim" href="{% url 'ventas:caja' %}"><i class="bi bi-upc-scan"></i><span>Nueva venta</span></a>
     <a class="m" href="{% url 'ventas:lista' %}"><i class="bi bi-receipt"></i><span>Historial de ventas</span></a>
 
     <div class="grp">Inventario</div>
-    <a class="m" href="{% url 'productos:lista' %}"><i class="bi bi-box-seam"></i><span>Productos</span></a>
-    <a class="m" href="{% url 'inventario:stock' %}"><i class="bi bi-clipboard-data"></i><span>Stock actual</span></a>
+    <a class="m prim" href="{% url 'productos:lista' %}"><i class="bi bi-box-seam"></i><span>Productos</span></a>
+    <a class="m prim" href="{% url 'inventario:stock' %}"><i class="bi bi-clipboard-data"></i><span>Stock</span></a>
     {% if user.es_admin %}
     <a class="m" href="{% url 'inventario:movimientos' %}"><i class="bi bi-arrow-left-right"></i><span>Historial de movimientos</span></a>
     {% endif %}
@@ -40,18 +42,46 @@
     {% endif %}
 
     <div class="grp">Cuenta</div>
+    <a class="m" href="{% url 'usuarios:perfil' %}"><i class="bi bi-person-circle"></i><span>Perfil</span></a>
     <a class="m" href="{% url 'usuarios:cambiar_contrasena' %}"><i class="bi bi-key"></i><span>Clave</span></a>
     <a class="m" href="#" onclick="document.getElementById('salir').submit();return false;"><i class="bi bi-box-arrow-right"></i><span>Salir</span></a>
     <form id="salir" method="post" action="{% url 'usuarios:cerrar_sesion' %}" hidden>{% csrf_token %}</form>
+    <button type="button" class="mas" id="btn-mas" aria-expanded="false" aria-controls="menu">
+      <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i><span>Más</span>
+    </button>
   </nav>
+  <div class="velo" id="velo" hidden></div>
+  <script>
+  (function () {
+    var menu = document.getElementById('menu'), boton = document.getElementById('btn-mas'), velo = document.getElementById('velo');
+    function abrir(si) {
+      menu.classList.toggle('abierto', si); velo.hidden = !si;
+      boton.setAttribute('aria-expanded', si ? 'true' : 'false');
+      boton.querySelector('span').textContent = si ? 'Cerrar' : 'Más';
+      boton.querySelector('i').className = si ? 'bi bi-x-lg' : 'bi bi-grid-3x3-gap';
+    }
+    boton.addEventListener('click', function () { abrir(!menu.classList.contains('abierto')); });
+    velo.addEventListener('click', function () { abrir(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') abrir(false); });
+    // Marca la sección actual (el enlace cuya ruta coincide más con la dirección).
+    var mejor = null, largo = 0, ruta = location.pathname;
+    menu.querySelectorAll('a.m[href^="/"]').forEach(function (a) {
+      var p = a.getAttribute('href');
+      if ((ruta === p || (p !== '/' && ruta.indexOf(p) === 0)) && p.length > largo) { mejor = a; largo = p.length; }
+    });
+    if (mejor) { mejor.classList.add('on'); mejor.setAttribute('aria-current', 'page'); }
+  })();
+  </script>
   {% endif %}
   {% endblock %}
 
   <main class="container-fluid pb-5">
     {% if user.is_authenticated %}
     <div class="topbar"><i class="bi bi-shop"></i><b>Botillería</b>
-      <span class="ms-auto small">{{ user.get_full_name|default:user.username }}</span>
-      <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
+      <a class="ms-auto small text-reset text-decoration-none d-flex align-items-center gap-2" href="{% url 'usuarios:perfil' %}" title="Mi perfil">
+        <span>{{ user.get_full_name|default:user.username }}</span>
+        <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
+      </a>
     </div>
     {% endif %}
     {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% elif m.tags == 'warning' %}warning{% elif m.tags == 'info' %}info{% else %}success{% endif %}" role="{% if m.tags == 'error' %}alert{% else %}status{% endif %}">{{ m }}</div>{% endfor %}

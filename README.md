@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white" alt="Bootstrap 5.3">
   <img src="https://img.shields.io/badge/SQLite-desarrollo-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/PostgreSQL-producci%C3%B3n-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/Pruebas-99%20OK-15803D?style=for-the-badge" alt="99 pruebas">
+  <img src="https://img.shields.io/badge/Pruebas-118%20OK-15803D?style=for-the-badge" alt="118 pruebas">
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@ El sistema reemplaza el control manual del inventario de una botillería. Las pa
 
 | Funcionalidad | Descripción | HU |
 |---|---|---|
-| **Usuarios** | Roles Admin y Trabajador, inicio de sesión con bloqueo por intentos fallidos, cambio de contraseña | |
+| **Usuarios** | Roles Admin y Trabajador, inicio de sesión con bloqueo por intentos fallidos, perfil con el rol, cambio de contraseña | |
 | **Productos** | Registro, edición, baja lógica, búsqueda por código, nombre o categoría; escaneo con la cámara | |
 | **Ventas** | Caja con lector o cámara, total automático, medio de pago, confirmación de edad en alcohol, comprobante, anulación con motivo | HU-13 a HU-18 |
 | **Inventario** | Stock actual con alerta de stock bajo, historial de movimientos con usuario, ajuste manual (mermas) | HU-10 a HU-12 |
@@ -228,7 +228,7 @@ Con SQLite también basta copiar `db.sqlite3` con el servidor detenido; con Post
 | Medida | Cómo se aplica |
 |---|---|
 | Secretos y configuración | `SECRET_KEY`, `DEBUG`, hosts y base de datos en `.env` (no se sube); sin `.env`, `DEBUG=False` |
-| Contraseñas | Hash de Django (PBKDF2) y validadores de largo, similitud, comunes y numéricas |
+| Contraseñas | Hash de Django (PBKDF2) y validadores de largo, similitud, comunes y numéricas. Nadie puede verlas: el admin solo puede restablecerlas confirmando con su propia clave, y queda registrado |
 | Fuerza bruta | Bloqueo de 15 min tras 5 intentos fallidos por usuario o 20 por IP; queda registrado |
 | Roles | Admin y Trabajador validados **en el servidor** en cada vista (403 si no corresponde) |
 | Datos de otros usuarios | El trabajador solo ve sus ventas (sin acceso por cambiar el N° en la URL) |
@@ -250,7 +250,7 @@ Con SQLite también basta copiar `db.sqlite3` con el servidor detenido; con Post
 python manage.py test
 ```
 
-99 pruebas automáticas: usuarios, seguridad del login y configuración (25), productos (15), inventario (17), compras (10), ventas (27) y reportes (5). Cubren permisos por rol, cálculo de totales, stock justo e insuficiente, transacciones que no quedan a medias, doble envío, datos inválidos, reglas en la base de datos, idempotencia de `seed_demo` y respaldo/restauración.
+118 pruebas automáticas: usuarios, seguridad del login, perfil, restablecimiento de claves y configuración (38), productos (15), inventario (17), compras (16), ventas (27) y reportes (5). Cubren permisos por rol, cálculo de totales, stock justo e insuficiente, transacciones que no quedan a medias, doble envío, datos inválidos (campos vacíos, fechas futuras o inválidas, correos mal escritos), reglas en la base de datos, idempotencia de `seed_demo` y respaldo/restauración.
 
 ## Flujo de trabajo en Git
 

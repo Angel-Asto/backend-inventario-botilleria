@@ -20,6 +20,21 @@ h1,.h3{font-size:1.25rem}h2,.h5,.h6{font-size:.95rem}
 .bnav a .bi{display:block;font-size:1.25rem;margin-bottom:1px}
 .bnav a.on{color:var(--acc);font-weight:600}.bnav a.on::before{content:"";position:absolute;top:0;left:28%;right:28%;height:2px;background:var(--acc)}
 .bnav~main{max-width:1100px;margin:0 auto;padding:0 1rem 6rem}
+/* Celular: 4 accesos principales + "Más", que despliega el resto en cuadrícula */
+.bnav .mas{display:none}
+.velo{position:fixed;inset:0;z-index:19;background:#0f172a59}
+@media(max-width:767.98px){
+.bnav{padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav a.m:not(.prim){display:none}
+.bnav .mas{display:block;flex:1;background:none;border:0;color:var(--mute);font-family:inherit;font-size:.7rem;font-weight:500;line-height:1.5;padding:.5rem 0 .55rem;cursor:pointer}
+.bnav .mas .bi{display:block;font-size:1.25rem;margin-bottom:1px}
+.bnav a{min-width:0}
+.bnav.abierto{flex-wrap:wrap;max-height:78vh;overflow-y:auto;border-radius:14px 14px 0 0;box-shadow:0 -8px 24px #0f172a29;padding-top:.4rem}
+.bnav.abierto a.m{display:block;flex:0 0 25%;padding:.7rem .15rem}
+.bnav.abierto .grp{display:block;flex:0 0 100%;color:var(--mute);font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:.6rem 1rem .1rem}
+.bnav.abierto .mas{flex:0 0 100%;border-top:1px solid var(--line);margin-top:.4rem}
+.bnav.abierto a.on::before{content:none}
+}
 .topbar{display:flex;align-items:center;gap:.6rem;background:#fff;color:var(--ink);border-bottom:1px solid var(--line);border-radius:0;margin:0 -1rem 1.25rem;padding:.7rem 1rem;box-shadow:none;font-size:.95rem}
 .topbar .bi-shop{color:var(--acc);font-size:1.1rem}
 .avatar{width:30px;height:30px;border-radius:50%;background:#e2e8f0;color:#334155;font-size:.8rem;font-weight:600;display:grid;place-items:center}
@@ -61,6 +76,6 @@ h1,.h3{font-size:1.25rem}h2,.h5,.h6{font-size:.95rem}
 .bnav a,.bnav a:not(.m){display:flex;align-items:center;gap:.65rem;flex:none;text-align:left;color:#cbd5e1;font-size:.88rem;padding:.5rem 1.25rem;border-left:2px solid transparent}
 .bnav a .bi{display:inline;font-size:1rem;margin:0;color:#94a3b8}
 .bnav a:hover{background:#1e293b;color:#fff}.bnav a.on{background:#1e293b;color:#fff;border-left-color:#2dd4bf}.bnav a.on .bi{color:#2dd4bf}.bnav a.on::before{content:none}
-.bnav~main{margin-left:232px;max-width:none;padding:0 2rem 3rem}
+.bnav~main{margin-left:232px;width:auto;max-width:none;padding:0 2rem 3rem}/* width:auto: sin esto, 100% + 232px desborda la ventana */
 .topbar{margin:0 -2rem 1.5rem;padding:.8rem 2rem}.topbar b{font-weight:600}.hello,.bnav~main>h1,.bnav~main>div:not(.topbar){max-width:1100px}
 .paybar{left:232px;bottom:0}}

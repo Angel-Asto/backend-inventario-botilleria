@@ -1,11 +1,54 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView, PasswordChangeView
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView, TemplateView
+from django.views.generic import CreateView, FormView, ListView, TemplateView, UpdateView
 
-from .forms import CambioContrasenaForm, LoginForm, UsuarioCreacionForm
+from .forms import CambioContrasenaForm, LoginForm, PerfilForm, RestablecerClaveForm, UsuarioCreacionForm
 from .models import Usuario
+
+log = logging.getLogger('seguridad')
+
+# Qué puede hacer cada rol (se muestra en el perfil).
+PERMISOS_POR_ROL = {
+    Usuario.Rol.ADMIN: [
+        'Registrar ventas y anularlas indicando un motivo',
+        'Administrar productos, categorías, proveedores y compras',
+        'Ajustar el stock y ver el historial de movimientos',
+        'Ver los reportes de todo el local y crear usuarios',
+        'Restablecer la contraseña de otros usuarios (confirmando con la suya)',
+    ],
+    Usuario.Rol.TRABAJADOR: [
+        'Registrar ventas en la caja',
+        'Ver sus propias ventas y comprobantes',
+        'Consultar el catálogo y el stock actual',
+    ],
+}
+
+
+class PerfilView(LoginRequiredMixin, UpdateView):
+    """Perfil del usuario que inició sesión. No recibe un id en la URL: nadie puede abrir el perfil de otro."""
+    form_class = PerfilForm
+    template_name = 'usuarios/perfil.html'
+    success_url = reverse_lazy('usuarios:perfil')
+
+    def get_object(self, queryset=None):
+        # Una copia fresca: si el formulario trae errores, la tarjeta (request.user) no muestra datos inválidos.
+        return Usuario.objects.get(pk=self.request.user.pk)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        rol = Usuario.Rol.ADMIN if self.request.user.es_admin else self.request.user.rol
+        ctx['permisos'] = PERMISOS_POR_ROL.get(rol, [])
+        return ctx
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Perfil actualizado correctamente.')
+        return super().form_valid(form)
 
 
 class AdminRequeridoMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -74,4 +117,38 @@ class UsuarioCrearView(AdminRequeridoMixin, CreateView):
 
     def form_valid(self, form):
         messages.success(self.request, 'Usuario creado correctamente.')
+        return super().form_valid(form)
+
+class UsuarioRestablecerClaveView(AdminRequeridoMixin, FormView):
+    """El admin asigna una contraseña nueva a otro usuario, confirmando con la suya (no se pueden ver: están con hash)."""
+    form_class = RestablecerClaveForm
+    template_name = 'usuarios/restablecer_clave.html'
+    success_url = reverse_lazy('usuarios:lista')
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.es_admin:
+            return super().dispatch(request, *args, **kwargs)  # el mixin responde: login o 403
+        self.usuario = get_object_or_404(Usuario, pk=kwargs['pk'])
+        if self.usuario == request.user:
+            messages.info(request, 'Tu propia contraseña se cambia en «Cambiar contraseña».')
+            return redirect('usuarios:cambiar_contrasena')
+        if self.usuario.is_superuser and not request.user.is_superuser:
+            raise PermissionDenied  # un admin no puede tomar la cuenta de un superusuario
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.update(usuario=self.usuario, admin=self.request.user)
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['usuario'] = self.usuario
+        return ctx
+
+    def form_valid(self, form):
+        form.save()  # guarda el hash nuevo y cierra las sesiones abiertas de ese usuario
+        log.warning('Contraseña restablecida: admin=%s usuario=%s', self.request.user.username, self.usuario.username)
+        messages.success(self.request, f'Contraseña de {self.usuario.username} restablecida. '
+                                       'Entrégasela en persona; podrá cambiarla desde su perfil.')
         return super().form_valid(form)
